@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { DailyTemp } from '../shared/chill';
+import type { DailyWeather } from '../shared/chill';
 import { FUTURE_PERIOD, OBSERVED_PERIOD, BASELINE_PERIOD } from '../shared/types';
 
 /**
@@ -21,8 +21,12 @@ export interface RawDaily {
   daily: Record<string, (number | null)[]> & { time: string[] };
 }
 
+/** Bump when the requested variables change so old cache files aren't reused. */
+const CACHE_VERSION = 'v2';
+const DAILY_VARS = 'temperature_2m_max,temperature_2m_min,precipitation_sum';
+
 export function cacheKey(kind: 'observed' | 'models', lat: number, lon: number): string {
-  return `${kind}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
+  return `${CACHE_VERSION}_${kind}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
 }
 
 async function readCache(key: string): Promise<RawDaily | null> {
@@ -76,7 +80,7 @@ export async function getObserved(lat: number, lon: number) {
     longitude: String(lon),
     start_date: `${OBSERVED_PERIOD[0]}-01-01`,
     end_date: `${OBSERVED_PERIOD[1]}-12-31`,
-    daily: 'temperature_2m_max,temperature_2m_min',
+    daily: DAILY_VARS,
     timezone: 'auto',
   });
   return cached(cacheKey('observed', lat, lon), `${ARCHIVE_URL}?${params}`);
@@ -89,16 +93,17 @@ export async function getModels(lat: number, lon: number) {
     start_date: `${BASELINE_PERIOD[0]}-01-01`,
     end_date: `${FUTURE_PERIOD[1]}-12-31`,
     models: CLIMATE_MODELS.join(','),
-    daily: 'temperature_2m_max,temperature_2m_min',
+    daily: DAILY_VARS,
   });
   return cached(cacheKey('models', lat, lon), `${CLIMATE_URL}?${params}`);
 }
 
 /**
- * Pull one model's tmin/tmax series out of an Open-Meteo daily block.
+ * Pull one model's daily series out of an Open-Meteo daily block.
  * Multi-model responses suffix each variable with the model name; single-series responses don't.
+ * Rainfall is optional: a missing rainfall variable gives precip = null rather than failing.
  */
-export function toDailyTemps(raw: RawDaily, model?: string): DailyTemp[] | null {
+export function toDailyWeather(raw: RawDaily, model?: string): DailyWeather[] | null {
   const d = raw.daily;
   if (!d?.time) return null;
   const hasSuffixed = Object.keys(d).some((k) => CLIMATE_MODELS.some((m) => k.endsWith(`_${m}`)));
@@ -108,13 +113,15 @@ export function toDailyTemps(raw: RawDaily, model?: string): DailyTemp[] | null 
 
   const tmax = d[key('temperature_2m_max')];
   const tmin = d[key('temperature_2m_min')];
+  const precip = d[key('precipitation_sum')];
   if (!tmax || !tmin) return null;
-  const out: DailyTemp[] = [];
+  const out: DailyWeather[] = [];
   d.time.forEach((date, i) => {
     const lo = tmin[i];
     const hi = tmax[i];
     if (lo == null || hi == null) return;
-    out.push({ date, tmin: lo, tmax: hi });
+    const p = precip?.[i];
+    out.push({ date, tmin: lo, tmax: hi, precip: p == null ? null : p });
   });
   return out.length ? out : null;
 }
