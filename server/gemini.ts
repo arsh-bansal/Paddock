@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
-import type { ClimateAnalysis, OptionEvaluation, StressDiagnosis } from '../shared/types';
+import type { ClimateAnalysis, CropEvaluation, StressDiagnosis } from '../shared/types';
 
 const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 let client: GoogleGenAI | null = null;
@@ -14,28 +14,42 @@ function ai(): GoogleGenAI {
   return client;
 }
 
-const round = (n: number) => Math.round(n);
+const round = (n: number) => (Number.isFinite(n) ? Math.round(n) : null);
+const one = (n: number) => (Number.isFinite(n) ? Math.round(n * 10) / 10 : null);
 
 /** Plain-English brief for the grower. The model only rewords numbers we computed. */
-export async function explainResult(analysis: ClimateAnalysis, options: OptionEvaluation[]): Promise<string> {
+export async function explainResult(analysis: ClimateAnalysis, crops: CropEvaluation[]): Promise<string> {
+  const b = analysis.baseline.summary;
+  const f = analysis.future.summary;
+  const then = `${analysis.baseline.period[0]}-${analysis.baseline.period[1]}`;
+  const next = `${analysis.future.period[0]}-${analysis.future.period[1]}`;
   const facts = {
     location: analysis.location.label,
-    winterChillHours: {
-      [`${analysis.baseline.period[0]}-${analysis.baseline.period[1]} typical`]: round(analysis.baseline.chillHours.median),
-      [`${analysis.future.period[0]}-${analysis.future.period[1]} typical`]: round(analysis.future.chillHours.median),
-      [`${analysis.future.period[0]}-${analysis.future.period[1]} poor winter (1 in 10)`]: round(analysis.future.chillHours.p10),
+    periods: { then, projected: next },
+    winter: { typicalChillHours: { then: round(b.chillHours.median), projected: round(f.chillHours.median) }, poorWinterChillHoursProjected: round(f.chillHours.p10) },
+    spring: { frostDaysAtOrBelow0CAugToOct: { then: one(b.springFrostDays.mean), projected: one(f.springFrostDays.mean) } },
+    summer: {
+      hotDaysAtOrAbove35C: { then: one(b.hotDays.mean), projected: one(f.hotDays.mean) },
+      typicalLongestHotSpellDays: { then: round(b.longestHotSpell.median), projected: round(f.longestHotSpell.median) },
     },
-    hotDaysPerSummerAtOrAbove35C: {
-      baseline: Number(analysis.baseline.hotDays.mean.toFixed(1)),
-      future: Number(analysis.future.hotDays.mean.toFixed(1)),
+    water: {
+      annualRainfallMm: { then: round(b.annualRainMm.mean), projected: round(f.annualRainMm.mean) },
+      annualShortfallRainVsEvaporationMm: { then: round(b.waterDeficitMm.mean), projected: round(f.waterDeficitMm.mean) },
     },
     climateModelsUsed: analysis.future.models.length,
-    options: options.map((o) => ({
-      option: o.label,
-      chillNeededHours: o.requirement,
-      percentOfWintersMetBaseline: round(o.baselinePctMet),
-      percentOfWintersMetFuture: round(o.futurePctMet),
-      verdict: o.verdict,
+    crops: crops.map((c) => ({
+      crop: c.label,
+      overall: c.overall,
+      seasons: c.seasons
+        .filter((s) => s.verdict !== 'no-data')
+        .map((s) => ({
+          season: s.season,
+          verdict: s.verdict,
+          measure:
+            s.season === 'winter' ? '% of winters with enough chill' : s.season === 'spring' ? '% of years with damaging frost at flowering' : 'hot days in a typical summer',
+          then: round(s.baseline ?? NaN),
+          projected: round(s.future ?? NaN),
+        })),
     })),
   };
 
@@ -48,10 +62,10 @@ export async function explainResult(analysis: ClimateAnalysis, options: OptionEv
       systemInstruction: [
         'You write short briefs for Australian orchardists deciding what to plant on a block that will crop for the next 20 years.',
         'Use plain Australian English, as if talking to the grower over the fence. No headings, no bullet points, no markdown.',
-        'Two short paragraphs, under 140 words total.',
-        'Only use numbers that appear in the facts. Never invent figures, varieties, prices or sources.',
-        'Paragraph 1: how winter chill and summer heat are changing at this location.',
-        'Paragraph 2: what that means for the options, starting with the safest one.',
+        'Two short paragraphs, under 160 words total.',
+        'Only use numbers that appear in the facts. Never invent figures, varieties, prices or sources. Skip any value that is null.',
+        'Paragraph 1: how the seasons are changing at this location: winter chill, spring frost, summer heat and water, in that order. Only mention the changes that matter most.',
+        'Paragraph 2: what that means for the crops, starting with the safest one, and name the season that holds back each risky crop.',
         'End with one sentence saying these are model projections and the cultivar choice should be checked with their nursery or an Agriculture Victoria adviser.',
       ].join('\n'),
     },
