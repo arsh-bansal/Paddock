@@ -1,36 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyMonthlyDelta, chillHours, chillPortions, daylengthHours, hourlyTemps,
-  monthlyMeans, percentile, seasonalStats, type DailyTemp,
+  annualPrecipChangePct, applyMonthlyDelta, chillHours, chillPortions, daylengthHours, et0Hargreaves, hourlyTemps,
+  monthlyMeans, percentile, precipRatios,
 } from '../shared/chill';
-import { pctMet, verdictFor } from '../shared/evaluate';
-
-function series(year: number, f: (doy: number) => { tmin: number; tmax: number }): DailyTemp[] {
-  const out: DailyTemp[] = [];
-  const d = new Date(Date.UTC(year, 0, 1));
-  let doy = 1;
-  while (d.getUTCFullYear() === year) {
-    out.push({ date: d.toISOString().slice(0, 10), ...f(doy) });
-    d.setUTCDate(d.getUTCDate() + 1);
-    doy++;
-  }
-  return out;
-}
+import { series } from './helpers';
 
 describe('daylength', () => {
   it('is ~12 h at the equinox and shorter in a southern winter', () => {
     expect(daylengthHours(-36.4, 80)).toBeGreaterThan(11.8);
     expect(daylengthHours(-36.4, 80)).toBeLessThan(12.3);
-    expect(daylengthHours(-36.4, 172)).toBeLessThan(10); // ~21 June
-    expect(daylengthHours(-36.4, 355)).toBeGreaterThan(14); // ~21 Dec
+    expect(daylengthHours(-36.4, 172)).toBeLessThan(10);
+    expect(daylengthHours(-36.4, 355)).toBeGreaterThan(14);
   });
 });
 
 describe('hourly reconstruction', () => {
-  it('stays within the daily min/max envelope and hits both ends', () => {
-    const days = series(2001, () => ({ tmin: 2, tmax: 14 }));
-    const h = hourlyTemps(days, -36.4);
-    const mid = Array.from(h.slice(100 * 24, 101 * 24));
+  it('stays within the daily min/max envelope and reaches both ends', () => {
+    const days = series('2001-01-01', '2001-12-31', () => ({ tmin: 2, tmax: 14 }));
+    const mid = Array.from(hourlyTemps(days, -36.4).slice(100 * 24, 101 * 24));
     expect(Math.min(...mid)).toBeGreaterThanOrEqual(1.99);
     expect(Math.max(...mid)).toBeLessThanOrEqual(14.01);
     expect(Math.max(...mid)).toBeGreaterThan(13.5);
@@ -42,47 +29,55 @@ describe('chill models', () => {
   it('chill hours count only 0–7.2 °C', () => {
     expect(chillHours([-1, 0, 3, 7.2, 7.3, 15])).toBe(3);
   });
-
-  it('dynamic model accrues at optimal temps, not when warm', () => {
+  it('dynamic model accrues near the optimum but not when warm', () => {
     const cold = chillPortions(Array(24 * 30).fill(6));
-    const warm = chillPortions(Array(24 * 30).fill(20));
-    expect(cold).toBeGreaterThan(15); // roughly 0.8–1 portion per day near optimum
+    expect(cold).toBeGreaterThan(15);
     expect(cold).toBeLessThan(35);
-    expect(warm).toBe(0);
-  });
-
-  it('warmer winters produce less chill', () => {
-    const cool = series(2001, () => ({ tmin: 2, tmax: 12 }));
-    const warmer = applyMonthlyDelta(cool, monthlyMeans(cool, 2001, 2001), {
-      tmin: Array(12).fill(4), tmax: Array(12).fill(14),
-    });
-    const [a] = seasonalStats(cool, -36.4);
-    const [b] = seasonalStats(warmer, -36.4);
-    expect(b.chillHours).toBeLessThan(a.chillHours);
-    expect(b.chillPortions).toBeLessThan(a.chillPortions);
-  });
-
-  it('counts hot days in Dec–Feb only', () => {
-    const days = series(2001, (doy) => ({ tmin: 15, tmax: doy <= 10 || doy > 360 ? 38 : 30 }));
-    expect(seasonalStats(days, -36.4)[0].hotDays).toBe(15);
-  });
-
-  it('drops seasons with missing data instead of under-counting', () => {
-    const days = series(2001, () => ({ tmin: 2, tmax: 12 })).filter((d) => !d.date.startsWith('2001-06'));
-    expect(seasonalStats(days, -36.4)).toHaveLength(0);
+    expect(chillPortions(Array(24 * 30).fill(20))).toBe(0);
   });
 });
 
-describe('evaluation', () => {
-  const winters = [300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200];
-  it('percentile interpolates', () => {
-    expect(percentile(winters, 50)).toBe(750);
-    expect(percentile(winters, 10)).toBe(390);
+describe('delta change', () => {
+  const base = series('2001-01-01', '2001-12-31', () => ({ tmin: 2, tmax: 12, precip: 2 }));
+  const baseMeans = monthlyMeans(base, 2001, 2001);
+
+  it('shifts temperatures additively and rainfall by ratio', () => {
+    const fut = { tmin: Array(12).fill(3), tmax: Array(12).fill(14), precip: Array(12).fill(1.6) };
+    const shifted = applyMonthlyDelta(base, baseMeans, fut);
+    expect(shifted[0].tmin).toBeCloseTo(3);
+    expect(shifted[0].tmax).toBeCloseTo(14);
+    expect(shifted[0].precip).toBeCloseTo(1.6);
+    expect(annualPrecipChangePct(baseMeans, fut)).toBeCloseTo(-20);
   });
-  it('verdict follows safe-winter-chill logic', () => {
-    expect(verdictFor(winters, 350)).toBe('viable');
-    expect(verdictFor(winters, 700)).toBe('at-risk');
-    expect(verdictFor(winters, 900)).toBe('not-viable');
-    expect(pctMet(winters, 700)).toBe(60);
+
+  it('clamps rainfall ratios and ignores near-dry baseline months', () => {
+    const wet = { ...baseMeans, precip: Array(12).fill(10) };
+    expect(precipRatios(baseMeans, wet).every((r) => r === 1.5)).toBe(true);
+    const dryBase = { ...baseMeans, precip: Array(12).fill(0.05) };
+    expect(precipRatios(dryBase, wet).every((r) => r === 1)).toBe(true);
+  });
+
+  it('keeps missing rainfall missing', () => {
+    const withGap = [{ date: '2001-01-01', tmin: 1, tmax: 10, precip: null }];
+    expect(applyMonthlyDelta(withGap, baseMeans, baseMeans)[0].precip).toBeNull();
+  });
+});
+
+describe('evapotranspiration', () => {
+  it('gives plausible Victorian values: high in summer, low in winter', () => {
+    const jan = et0Hargreaves(-36.4, 15, 15, 31);
+    const jul = et0Hargreaves(-36.4, 196, 3, 13);
+    expect(jan).toBeGreaterThan(5);
+    expect(jan).toBeLessThan(8);
+    expect(jul).toBeGreaterThan(0.5);
+    expect(jul).toBeLessThan(1.8);
+  });
+});
+
+describe('percentile', () => {
+  it('interpolates linearly', () => {
+    const v = [300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200];
+    expect(percentile(v, 50)).toBe(750);
+    expect(percentile(v, 10)).toBe(390);
   });
 });

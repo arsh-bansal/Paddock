@@ -30,7 +30,7 @@ export function OptionPicker({ value, onChange }: Props) {
                   className="mt-1 size-5 accent-leaf" />
                 <span>
                   <span className="block font-bold">{c.crop}</span>
-                  <span className="block text-sm text-muted">{c.type}, usually {c.chillHours[0]}–{c.chillHours[1]} chill hours</span>
+                  <span className="block text-sm text-muted">{c.type}, usually {c.winter.chillHours[0]}–{c.winter.chillHours[1]} chill hours</span>
                 </span>
               </label>
               <div className="flex items-center gap-2">

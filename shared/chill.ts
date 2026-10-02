@@ -7,21 +7,16 @@
  *  - Chill Hours: Weinberger (1950) — hours between 0 and 7.2 °C.
  *  - Chill Portions (Dynamic Model): Fishman, Erez & Couvillon (1987); equations as in chillR.
  *  - "Safe winter chill" (10th percentile of winters): Luedeling et al. (2009), PLoS ONE.
+ *  - Reference evapotranspiration: Hargreaves & Samani (1985), with FAO-56 extraterrestrial radiation.
  */
 
-export interface DailyTemp {
+export interface DailyWeather {
   /** ISO date, YYYY-MM-DD (local time at the site) */
   date: string;
   tmin: number;
   tmax: number;
-}
-
-export interface SeasonStat {
-  year: number;
-  chillHours: number;
-  chillPortions: number;
-  /** Days with tmax >= HOT_DAY_C in Dec, Jan and Feb of that calendar year */
-  hotDays: number;
+  /** Daily precipitation in mm; null when the source has no value */
+  precip: number | null;
 }
 
 export interface Summary {
@@ -30,13 +25,6 @@ export interface Summary {
   p90: number;
   mean: number;
 }
-
-/** Southern-hemisphere chill season: 1 April – 30 September (months are 1-based). */
-export const CHILL_SEASON_MONTHS = [4, 5, 6, 7, 8, 9] as const;
-export const HEAT_MONTHS = [12, 1, 2] as const;
-export const HOT_DAY_C = 35;
-/** Seasons with more missing days than this are dropped rather than under-counted. */
-const MAX_MISSING_FRACTION = 0.05;
 
 const DEG = Math.PI / 180;
 
@@ -68,7 +56,7 @@ export function daylengthHours(latDeg: number, doy: number): number {
  * sine curve during daylight, logarithmic decay overnight towards the next day's minimum.
  * Returns an array with 24 * days.length values.
  */
-export function hourlyTemps(days: DailyTemp[], latDeg: number): Float64Array {
+export function hourlyTemps(days: Pick<DailyWeather, 'date' | 'tmin' | 'tmax'>[], latDeg: number): Float64Array {
   const out = new Float64Array(days.length * 24);
   const n = days.length;
 
@@ -160,6 +148,7 @@ export function percentile(values: number[], p: number): number {
 }
 
 export function summarise(values: number[]): Summary {
+  if (values.length === 0) return { p10: NaN, median: NaN, p90: NaN, mean: NaN };
   const mean = values.reduce((s, v) => s + v, 0) / values.length;
   return {
     p10: percentile(values, 10),
@@ -169,55 +158,18 @@ export function summarise(values: number[]): Summary {
   };
 }
 
-/**
- * Per-year chill (Apr–Sep) and heat (Dec–Feb, hot days) statistics.
- * Interpolation runs across the whole series so night-time hours use real neighbouring days.
- */
-export function seasonalStats(days: DailyTemp[], latDeg: number): SeasonStat[] {
-  const clean = days.filter((d) => Number.isFinite(d.tmin) && Number.isFinite(d.tmax));
-  if (clean.length === 0) return [];
-  const hourly = hourlyTemps(clean, latDeg);
-
-  const byYear = new Map<number, { idx: number[]; hot: number; heatDays: number }>();
-  clean.forEach((d, i) => {
-    const y = yearOf(d.date);
-    const m = monthOf(d.date);
-    if (!byYear.has(y)) byYear.set(y, { idx: [], hot: 0, heatDays: 0 });
-    const bucket = byYear.get(y)!;
-    if ((CHILL_SEASON_MONTHS as readonly number[]).includes(m)) bucket.idx.push(i);
-    if ((HEAT_MONTHS as readonly number[]).includes(m)) {
-      bucket.heatDays++;
-      if (d.tmax >= HOT_DAY_C) bucket.hot++;
-    }
-  });
-
-  const expectedSeasonDays = 183; // 1 Apr – 30 Sep
-  const stats: SeasonStat[] = [];
-  for (const [year, bucket] of [...byYear.entries()].sort((a, b) => a[0] - b[0])) {
-    if (bucket.idx.length < expectedSeasonDays * (1 - MAX_MISSING_FRACTION)) continue;
-    if (bucket.heatDays < 90 * (1 - MAX_MISSING_FRACTION)) continue;
-    const seasonHours: number[] = [];
-    for (const i of bucket.idx) {
-      for (let h = 0; h < 24; h++) seasonHours.push(hourly[i * 24 + h]);
-    }
-    stats.push({
-      year,
-      chillHours: chillHours(seasonHours),
-      chillPortions: chillPortions(seasonHours),
-      hotDays: bucket.hot,
-    });
-  }
-  return stats;
-}
-
 export interface MonthlyMeans {
-  tmin: number[]; // index 0 = January
+  /** index 0 = January */
+  tmin: number[];
   tmax: number[];
+  /** mean daily precipitation, mm/day (NaN when no data) */
+  precip: number[];
 }
 
-export function monthlyMeans(days: DailyTemp[], fromYear: number, toYear: number): MonthlyMeans {
-  const sum = { tmin: Array(12).fill(0), tmax: Array(12).fill(0) };
+export function monthlyMeans(days: DailyWeather[], fromYear: number, toYear: number): MonthlyMeans {
+  const sum = { tmin: Array(12).fill(0), tmax: Array(12).fill(0), precip: Array(12).fill(0) };
   const count = Array(12).fill(0);
+  const pCount = Array(12).fill(0);
   for (const d of days) {
     const y = yearOf(d.date);
     if (y < fromYear || y > toYear) continue;
@@ -226,25 +178,47 @@ export function monthlyMeans(days: DailyTemp[], fromYear: number, toYear: number
     sum.tmin[m] += d.tmin;
     sum.tmax[m] += d.tmax;
     count[m]++;
+    if (d.precip != null && Number.isFinite(d.precip)) {
+      sum.precip[m] += d.precip;
+      pCount[m]++;
+    }
   }
   return {
     tmin: sum.tmin.map((s, i) => (count[i] ? s / count[i] : NaN)),
     tmax: sum.tmax.map((s, i) => (count[i] ? s / count[i] : NaN)),
+    precip: sum.precip.map((s, i) => (pCount[i] ? s / pCount[i] : NaN)),
   };
 }
 
+/** Rainfall change is applied as a ratio, clamped so a dry baseline month can't explode. */
+const PRECIP_RATIO_LIMITS = [0.5, 1.5] as const;
+
+export function precipRatios(baseline: MonthlyMeans, future: MonthlyMeans): number[] {
+  return baseline.precip.map((b, i) => {
+    const f = future.precip[i];
+    if (!Number.isFinite(b) || !Number.isFinite(f) || b < 0.1) return 1;
+    return Math.min(Math.max(f / b, PRECIP_RATIO_LIMITS[0]), PRECIP_RATIO_LIMITS[1]);
+  });
+}
+
 /**
- * Delta-change method: shift the observed baseline record by each month's modelled warming
- * (future-period mean minus the same model's baseline-period mean). This keeps real local
- * day-to-day variability and avoids raw model temperature bias, which matters a lot for
- * threshold metrics like chill hours.
+ * Delta-change method: shift the observed baseline record by each month's modelled change
+ * (future-period mean vs the same model's baseline-period mean). Temperatures shift additively,
+ * rainfall scales by a ratio. This keeps real local day-to-day variability and avoids raw model
+ * bias, which matters a lot for threshold metrics like chill hours and frost days.
  */
-export function applyMonthlyDelta(observed: DailyTemp[], baseline: MonthlyMeans, future: MonthlyMeans): DailyTemp[] {
+export function applyMonthlyDelta(observed: DailyWeather[], baseline: MonthlyMeans, future: MonthlyMeans): DailyWeather[] {
   const dMin = future.tmin.map((f, i) => f - baseline.tmin[i]);
   const dMax = future.tmax.map((f, i) => f - baseline.tmax[i]);
+  const pRatio = precipRatios(baseline, future);
   return observed.map((d) => {
     const m = monthOf(d.date) - 1;
-    return { date: d.date, tmin: d.tmin + dMin[m], tmax: d.tmax + dMax[m] };
+    return {
+      date: d.date,
+      tmin: d.tmin + dMin[m],
+      tmax: d.tmax + dMax[m],
+      precip: d.precip == null ? null : d.precip * pRatio[m],
+    };
   });
 }
 
@@ -254,4 +228,32 @@ export function meanDelta(baseline: MonthlyMeans, future: MonthlyMeans, months: 
     return (future.tmin[i] + future.tmax[i]) / 2 - (baseline.tmin[i] + baseline.tmax[i]) / 2;
   });
   return deltas.reduce((s, v) => s + v, 0) / deltas.length;
+}
+
+/** Annual rainfall change in percent, from monthly means weighted by month length. */
+export function annualPrecipChangePct(baseline: MonthlyMeans, future: MonthlyMeans): number | null {
+  const days = [31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if ([...baseline.precip, ...future.precip].some((v) => !Number.isFinite(v))) return null;
+  const b = baseline.precip.reduce((s, v, i) => s + v * days[i], 0);
+  const f = future.precip.reduce((s, v, i) => s + v * days[i], 0);
+  return b > 0 ? ((f - b) / b) * 100 : null;
+}
+
+/** FAO-56 extraterrestrial radiation, MJ m-2 day-1. */
+export function extraterrestrialRadiation(latDeg: number, doy: number): number {
+  const phi = latDeg * DEG;
+  const dr = 1 + 0.033 * Math.cos((2 * Math.PI * doy) / 365);
+  const decl = 0.409 * Math.sin((2 * Math.PI * doy) / 365 - 1.39);
+  const ws = Math.acos(Math.min(Math.max(-Math.tan(phi) * Math.tan(decl), -1), 1));
+  return ((24 * 60) / Math.PI) * 0.082 * dr * (ws * Math.sin(phi) * Math.sin(decl) + Math.cos(phi) * Math.cos(decl) * Math.sin(ws));
+}
+
+/**
+ * Hargreaves–Samani reference evapotranspiration, mm/day. Needs only min/max temperature,
+ * so it can be computed identically for observed and projected climates.
+ */
+export function et0Hargreaves(latDeg: number, doy: number, tmin: number, tmax: number): number {
+  const ra = extraterrestrialRadiation(latDeg, doy) * 0.408; // MJ -> mm equivalent
+  const tmean = (tmin + tmax) / 2;
+  return Math.max(0, 0.0023 * ra * (tmean + 17.8) * Math.sqrt(Math.max(tmax - tmin, 0)));
 }
