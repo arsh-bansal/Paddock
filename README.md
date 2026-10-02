@@ -11,19 +11,17 @@ Stone fruit, cherries, apples and pears need a certain amount of winter cold ("c
 ## What it does
 
 1. **Pick the block.** Preset orchard districts (Shepparton, Cobram, Harcourt, Wandin North, Bacchus Marsh, Swan Hill), phone location, or coordinates.
-2. **Pick the options.** Crop types with indicative chill needs, or the exact figure from the nursery.
-3. **Get the answer.**
-   - Season by season for the location: winter chill, spring frost, summer heat, autumn heat and rain, and the yearly water balance, then vs 2026–2045.
-   - Real winter chill for every year 1995–2025, and the projected range for 2026–2045.
-   - A verdict per crop for winter, spring and summer; the overall verdict is the worst season.
-   - A plain-English summary written by Gemini from the computed numbers only.
-   - Practical ways to reduce the risk.
-4. **Keep it.** Download a 3-page PDF report, or save it on the device (opens offline).
+2. **See what suits it**, with no crop list to choose from first:
+   - **Grown around here today:** the district's current crops, each with its 2026–2045 verdict.
+   - **Could also suit this area:** other crops whose climate fit still works.
+   - **Struggles here:** the rest, with the reason.
+
+   Each crop is judged season by season (winter chill, spring frost, summer heat), and a grower can adjust any crop for their exact variety.
+3. **Understand the climate.** Season-by-season table, 50 years of winter chill, a plain-English summary (Gemini, from computed numbers only), and ways to reduce the risk.
+4. **Keep it.** Download a PDF report or save it on the device (opens offline).
 5. **Check a tree.** Photo triage for heat, water stress, pests and disease using Gemini vision.
 
-Details of the season engine and report: `docs/seasons-and-reports.md`.
-
-Everything is computed from real data at request time. Nothing is hardcoded.
+Details: `docs/regional-crops.md`, `docs/seasons-and-reports.md`, `docs/crop-data-sources.md`.
 
 ## How it works
 
