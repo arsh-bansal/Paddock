@@ -1,15 +1,16 @@
 import {
   Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
-import type { ClimateAnalysis, OptionEvaluation } from '../../shared/types';
+import type { CropEvaluation } from '../../shared/seasons';
+import type { ClimateAnalysis } from '../../shared/types';
 import { fmtInt } from '../lib/format';
 
 interface Props {
   analysis: ClimateAnalysis;
-  options: OptionEvaluation[];
+  crops: CropEvaluation[];
 }
 
-const VERDICT_STROKE = { viable: '#2f5a3b', 'at-risk': '#c9861b', 'not-viable': '#9b2f23' } as const;
+const VERDICT_STROKE = { viable: '#2f5a3b', 'at-risk': '#c9861b', 'not-viable': '#9b2f23', 'no-data': '#9a9c94' } as const;
 
 interface Row {
   year: number;
@@ -18,30 +19,36 @@ interface Row {
   median?: number;
 }
 
-export function ChillChart({ analysis, options }: Props) {
+export function ChillChart({ analysis, crops }: Props) {
   const { future } = analysis;
+  const chill = future.summary.chillHours;
+  const baseChill = analysis.baseline.summary.chillHours;
+  const options = crops.map((c) => {
+    const winter = c.seasons.find((s) => s.season === 'winter')!;
+    return { id: c.id, label: c.label, requirement: c.chillRequirement, verdict: winter.verdict };
+  });
   const rows: Row[] = [];
-  const obs = new Map(analysis.observed.map((s) => [s.year, s.chillHours]));
+  const obs = new Map(analysis.observed.flatMap((s) => (s.winter ? [[s.year, s.winter.chillHours] as const] : [])));
   for (let y = 1995; y <= future.period[1]; y++) {
     const row: Row = { year: y };
     if (obs.has(y)) row.observed = obs.get(y);
     if (y >= future.period[0]) {
-      row.band = [future.chillHours.p10, future.chillHours.p90];
-      row.median = future.chillHours.median;
+      row.band = [chill.p10, chill.p90];
+      row.median = chill.median;
     }
     rows.push(row);
   }
 
   const reqs = options.map((o) => o.requirement);
-  const rawMax = Math.max(future.chillHours.p90, analysis.baseline.chillHours.p90, ...reqs, ...obs.values()) * 1.08;
+  const rawMax = Math.max(chill.p90, baseChill.p90, ...reqs, ...obs.values()) * 1.08;
   const step = [100, 200, 250, 500, 1000].find((s) => rawMax / s <= 6) ?? 1000;
   const yMax = Math.ceil(rawMax / step) * step;
   const yTicks = Array.from({ length: yMax / step + 1 }, (_, i) => i * step);
 
   const summary =
-    `Chill hours per winter at ${analysis.location.label}. Observed winters ${analysis.observed[0]?.year}–` +
-    `${analysis.observed.at(-1)?.year}; projected typical winter ${future.period[0]}–${future.period[1]} about ` +
-    `${fmtInt(future.chillHours.median)} hours, poor winter about ${fmtInt(future.chillHours.p10)} hours.`;
+    `Chill hours per winter at ${analysis.location.label}. Observed winters ${[...obs.keys()][0]}–` +
+    `${[...obs.keys()].at(-1)}; projected typical winter ${future.period[0]}–${future.period[1]} about ` +
+    `${fmtInt(chill.median)} hours, poor winter about ${fmtInt(chill.p10)} hours.`;
 
   return (
     <figure className="rounded-2xl border border-line bg-card p-4 sm:p-6">
@@ -84,7 +91,7 @@ export function ChillChart({ analysis, options }: Props) {
         ))}
       </ul>
       <p className="mt-3 text-sm text-muted">
-        {`Dots are real winters (reanalysis). The shaded band is the spread of winters expected in ${future.period[0]}–${future.period[1]} across ${future.models.length} climate models, not a year-by-year forecast. Dotted lines are each option’s chill need, coloured by how it fares.`}
+        {`Dots are real winters (reanalysis). The shaded band is the spread of winters expected in ${future.period[0]}–${future.period[1]} across ${future.models.length} climate models, not a year-by-year forecast. Dotted lines are each option’s chill need, coloured by how it fares in winter.`}
       </p>
     </figure>
   );
