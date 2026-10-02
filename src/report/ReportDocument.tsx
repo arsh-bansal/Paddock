@@ -17,6 +17,7 @@ import {
   changeTone,
   describeSeason,
   formatChange,
+  requirementText,
   SEASON_LABEL,
   seasonRows,
   withUnit,
@@ -58,12 +59,6 @@ const VERDICT: Record<
   "at-risk": { label: "Risky", fg: C.sunInk, bg: C.sunSoft },
   "not-viable": { label: "Poor fit", fg: C.ember, bg: C.emberSoft },
   "no-data": { label: "No data", fg: C.muted, bg: C.paper },
-};
-const RANK: Record<SeasonVerdict, number> = {
-  viable: 0,
-  "at-risk": 1,
-  "not-viable": 2,
-  "no-data": 3,
 };
 
 const s = StyleSheet.create({
@@ -171,13 +166,14 @@ function ChillChart({
   const pad = { l: 34, r: 8, t: 8, b: 18 };
   const x0 = 1995;
   const x1 = analysis.future.period[1];
-  const chill = analysis.future.summary.chillHours;
+  const chill = analysis.future.summary.chillPortions;
   const obs = analysis.observed.flatMap((y) =>
-    y.winter ? [[y.year, y.winter.chillHours] as const] : [],
+    y.winter ? [[y.year, y.winter.chillPortions] as const] : [],
   );
-  const reqs = crops.map((c) => c.chillRequirement);
+  const reqs = crops.map((c) => c.chillPortionsRequirement);
   const raw = Math.max(chill.p90, ...reqs, ...obs.map(([, v]) => v)) * 1.08;
-  const step = [100, 200, 250, 500, 1000].find((st) => raw / st <= 5) ?? 1000;
+  const step =
+    [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find((st) => raw / st <= 5) ?? 1000;
   const yMax = Math.ceil(raw / step) * step;
   const x = (yr: number) =>
     pad.l + ((yr - x0) / (x1 - x0)) * (W - pad.l - pad.r);
@@ -254,8 +250,8 @@ function ChillChart({
             key={c.id}
             x1={pad.l}
             x2={W - pad.r}
-            y1={y(c.chillRequirement)}
-            y2={y(c.chillRequirement)}
+            y1={y(c.chillPortionsRequirement)}
+            y2={y(c.chillPortionsRequirement)}
             stroke={VERDICT[v].fg}
             strokeWidth={0.9}
             strokeDasharray="1.5 2"
@@ -277,10 +273,11 @@ function ChillChart({
 
 export function ReportDocument({ analysis, crops, brief }: ReportInput) {
   const rows = seasonRows(analysis);
-  const sorted = [...crops].sort((a, b) => RANK[a.overall] - RANK[b.overall]);
+  // `crops` arrive already ranked by rankCrops (shared/ranking.ts); keep that order.
+  const sorted = crops;
   const notes = adaptationNotes(analysis, crops);
-  const b = analysis.baseline.summary.chillHours.median;
-  const f = analysis.future.summary.chillHours.median;
+  const b = analysis.baseline.summary.chillPortions.median;
+  const f = analysis.future.summary.chillPortions.median;
   const change = Math.round(((f - b) / b) * 100);
   const loc = analysis.location;
   const generated = new Date(analysis.generatedAt).toLocaleDateString("en-AU", {
@@ -320,9 +317,9 @@ export function ReportDocument({ analysis, crops, brief }: ReportInput) {
         </Text>
 
         <Text style={s.lead}>
-          {`A typical winter here gave about ${int(b)} chill hours in ${period(analysis.baseline.period)}. For ${period(analysis.future.period)}, the years a tree planted now spends cropping, it is projected at about ${int(f)}${change < 0 ? `, ${Math.abs(change)}% less` : change > 0 ? `, ${change}% more` : ""}.`}
+          {`A typical winter here gave about ${int(b)} chill portions (the Dynamic Model measure Australian fruit research uses) in ${period(analysis.baseline.period)}. For ${period(analysis.future.period)}, the years a tree planted now spends cropping, it is projected at about ${int(f)}${change < 0 ? `, ${Math.abs(change)}% less` : change > 0 ? `, ${change}% more` : ""}.`}
           {best
-            ? ` Best climate fit of the options checked: ${best.label}.`
+            ? ` Best climate fit of the crops checked: ${best.label}.`
             : " None of the options checked is a good climate fit in every season."}
         </Text>
 
@@ -350,15 +347,15 @@ export function ReportDocument({ analysis, crops, brief }: ReportInput) {
           </View>
         ))}
         <Text style={s.small}>
-          Location averages, not crop-specific. Frost figures are
-          district-level: frost hollows on a block can be colder.
+          Location averages, not crop-specific. Frost is a district estimate from
+          a 10–25 km grid that undercounts cold nights; frost hollows get more.
         </Text>
 
         <View wrap={false}>
-          <Text style={s.h2}>Winter chill, past and projected</Text>
+          <Text style={s.h2}>Winter chill portions, past and projected</Text>
           <ChillChart analysis={analysis} crops={crops} />
           <Text style={s.small}>
-            {`Dots: real winters (chill hours, April to September). Shaded band: likely range of winters in ${period(analysis.future.period)} across ${analysis.future.models.length} climate models, with the dashed line the typical winter. Dotted lines: each crop's chill need, coloured by its winter result.`}
+            {`Dots: real winters (chill portions, April to September). Shaded band: likely range of winters in ${period(analysis.future.period)} across ${analysis.future.models.length} climate models, with the dashed line the typical winter. Dotted lines: each crop's chill need, coloured by its winter result.`}
           </Text>
         </View>
 
@@ -373,7 +370,7 @@ export function ReportDocument({ analysis, crops, brief }: ReportInput) {
             <View style={s.cardHead}>
               <Text
                 style={s.bold}
-              >{`${c.label} (needs about ${int(c.chillRequirement)} chill hours)`}</Text>
+              >{`${c.label}: ${requirementText(c)}`}</Text>
               <Text
                 style={[
                   s.chip,
@@ -400,8 +397,8 @@ export function ReportDocument({ analysis, crops, brief }: ReportInput) {
         ))}
         {anyIndicative && (
           <Text style={s.small}>
-            * Indicative: this crop threshold is a rule of thumb, not yet a
-            sourced figure. Confirm with your nursery.
+            * Indicative: the threshold was converted between chill measures or
+            comes from a non-Australian source. Confirm with your nursery.
           </Text>
         )}
 
@@ -447,17 +444,19 @@ export function ReportDocument({ analysis, crops, brief }: ReportInput) {
             {`Observed daily temperature and rainfall (${analysis.observed[0]?.year}–${analysis.observed.at(-1)?.year}) are ERA5 reanalysis from the Open-Meteo Historical Weather API. Future seasons apply each climate model's monthly change between ${period(analysis.baseline.period)} and ${period(analysis.future.period)} to the real ${period(analysis.baseline.period)} record (delta change), using ${analysis.future.models.length} CMIP6 HighResMIP models from the Open-Meteo Climate API: ${analysis.future.models.map((m) => m.model.replaceAll("_", "-")).join(", ")}.`}
           </Text>
           <Text style={[s.p, { marginTop: 4 }]}>
-            Chill hours count hours between 0 and 7.2 °C, rebuilt hourly from
-            daily min and max. A crop is a good winter fit if a poor winter
-            (worst 1 in 10) meets its need, a good spring fit if damaging frost
-            at flowering happens in no more than 1 year in 10, and a good summer
-            fit if even a hot summer stays within its heat tolerance. Water
-            shortfall uses Hargreaves evaporation minus rainfall.
+            Winter is scored in chill portions (Dynamic Model), from hourly
+            temperatures rebuilt from daily min and max. Requirements published
+            in chill hours are converted with Brunt et al. (2017, Hort
+            Innovation) Table 1. A crop is a good winter fit if a poor winter
+            (worst 1 in 10) meets its need, and a good spring fit if damaging
+            frost at flowering happens in no more than 1 year in 10. Summer heat
+            is reported but not scored until a published heat limit exists for
+            the crop. Water shortfall uses Hargreaves evaporation minus rainfall.
           </Text>
           <Text style={[s.p, { marginTop: 4 }]}>
             Limits: three models and one emissions pathway do not cover every
-            possible future; the 10–25 km grid misses local frost hollows and
-            slopes; flowering dates are fixed and do not yet shift earlier with
+            possible future; the 10–25 km grid smooths out cold nights, so spring
+            frost is underestimated, especially in frost hollows; flowering dates are fixed and do not yet shift earlier with
             warming. These are projections to guide a decision, not a guarantee.
             Check variety choices with your nursery or an Agriculture Victoria
             adviser.

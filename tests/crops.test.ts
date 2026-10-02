@@ -94,11 +94,23 @@ describe('crops loader (real catalogue)', () => {
     expect(new Set(CROP_OPTIONS.map((c) => c.id)).size).toBe(CROP_OPTIONS.length);
   });
 
-  it('applies decision 1: standard sweet cherry is a sourced range around 700', () => {
+  it('standard sweet cherry uses the Australian cherry guide, in chill portions directly', () => {
     const cherry = CROP_OPTIONS.find((c) => c.id === 'cherry-standard')!;
-    expect(cherry.winter.chillHours).toEqual([600, 800]);
-    expect(cherry.winter.indicative).toBe(false);
-    expect(cherry.winter.source).toContain('Chill Hours Tracker');
+    expect(cherry.winter.chillHours).toEqual([1000, 1500]);
+    expect(cherry.winter.chillPortions).toEqual([60, 80]);
+    expect(cherry.winter.portionsDerived).toBe(false);
+    expect(cherry.winter.portionsSource).toContain('Hort Innovation');
+  });
+
+  it('converts chill hours to portions when no direct figure is given, and flags it', () => {
+    const pear = CROP_OPTIONS.find((c) => c.id === 'pear')!;
+    expect(pear.winter.portionsDerived).toBe(true);
+    expect(pear.winter.chillPortions).toEqual([48, 56]); // 700 h -> 48, 900 h -> 56
+    expect(pear.winter.portionsSource).toContain('Brunt');
+  });
+
+  it('every crop has a source for its spring frost figure', () => {
+    for (const c of CROP_OPTIONS) if (c.spring) expect(c.spring.source).toContain('Critical Temperatures');
   });
 
   it('expands heat band keywords to the legacy numbers', () => {
@@ -111,6 +123,10 @@ describe('crops loader (real catalogue)', () => {
 
 describe('crops helpers (preserved behaviour)', () => {
   const peach = CROP_OPTIONS.find((c) => c.id === 'peach-standard')!;
+
+  it('cropLabel keeps proper adjectives capitalised', () => {
+    expect(cropLabel(CROP_OPTIONS.find((c) => c.id === 'plum-japanese')!)).toBe('Plum, Japanese types');
+  });
 
   it('cropLabel joins crop and lowercased type', () => {
     expect(cropLabel(peach)).toBe('Peach / nectarine, standard-chill varieties');
@@ -126,7 +142,7 @@ describe('crops helpers (preserved behaviour)', () => {
     expect(hasIndicativeData(peach)).toBe(true);
     const allSourced: CropOption = {
       ...peach,
-      winter: { ...peach.winter, indicative: false },
+      winter: { ...peach.winter, indicative: false, portionsDerived: false },
       spring: peach.spring ? { ...peach.spring, indicative: false } : null,
       summer: peach.summer ? { ...peach.summer, indicative: false } : null,
     };

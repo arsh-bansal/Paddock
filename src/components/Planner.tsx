@@ -3,7 +3,7 @@ import { Check, FileDown, Save } from "lucide-react";
 import { cropLabel, defaultRequirement, type CropOption } from "../../shared/crops";
 import { evaluateCrop, type CropEvaluation } from "../../shared/seasons";
 import { rankCrops } from "../../shared/ranking";
-import { filterAppropriateByChill } from "../../shared/chillFilter";
+import { partitionByChill } from "../../shared/chillFilter";
 import type { ClimateAnalysis } from "../../shared/types";
 import { fetchClimate } from "../lib/api";
 import { fmtInt, pctChange } from "../lib/format";
@@ -21,6 +21,7 @@ import {
   OptionPicker,
   type OptionState,
 } from "./OptionPicker";
+import { OptionResults } from "./OptionResults";
 import { SavedReports } from "./SavedReports";
 import { SeasonsPanel } from "./SeasonsPanel";
 
@@ -62,13 +63,12 @@ function evaluateAll(
   const evaluated = crops
     .filter((c) => options[c.id]?.selected)
     .map((c) =>
-      evaluateCrop(
-        c,
-        cropLabel(c),
-        analysis.baseline.years,
-        analysis.future.years,
-        options[c.id].requirement,
-      ),
+      evaluateCrop(c, cropLabel(c), analysis.baseline.years, analysis.future.years, {
+        // Only an edited figure is an override; the untouched default scores on the crop's own
+        // (possibly directly sourced) chill-portions requirement.
+        chillHoursOverride:
+          options[c.id].requirement !== defaultRequirement(c) ? options[c.id].requirement : undefined,
+      }),
     );
   // Order the considered crops best-fit-first. All consumers already accept CropEvaluation[].
   return rankCrops(evaluated);
@@ -159,16 +159,13 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
   // The AI brief gets the top-ranked crops only, capped so the request can never exceed
   // /api/explain's max(25) no matter how large the catalogue grows (design 4.6).
   const briefCrops = useMemo(() => crops.slice(0, BRIEF_CROP_CAP), [crops]);
-  // Step-2 DISPLAY filter: once a block's climate is known, narrow the picker to crops whose minimum
-  // chill need the block's future median chill can meet. This is a lightweight, chill-only pre-filter
-  // (NOT evaluateCrop/rankCrops) and affects what the picker SHOWS only — `evaluateAll` still runs over
-  // the full `combined` set, so hidden crops keep their OptionState and are still evaluated if selected.
-  const futureMedianChill = analysis
-    ? analysis.future.summary.chillHours.median
-    : NaN;
-  const visibleCrops = useMemo(
-    () => (analysis ? filterAppropriateByChill(combined, futureMedianChill) : combined),
-    [analysis, combined, futureMedianChill],
+  // Step-2 DISPLAY split: once the block's climate is known, crops a typical future winter can't
+  // satisfy move to a "struggles here" group (shown with the reason, never hidden). Display only:
+  // `evaluateAll` still runs over the full `combined` set.
+  const futureMedianPortions = analysis ? analysis.future.summary.chillPortions.median : NaN;
+  const { suited, struggling } = useMemo(
+    () => (analysis ? partitionByChill(combined, futureMedianPortions) : { suited: combined, struggling: [] }),
+    [analysis, combined, futureMedianPortions],
   );
   const signature = analysis ? briefSignature(analysis, briefCrops) : null;
   const currentBrief =
@@ -324,8 +321,8 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
     analysis && location && analysis.location.label !== location.label;
   const change = analysis
     ? pctChange(
-        analysis.baseline.summary.chillHours.median,
-        analysis.future.summary.chillHours.median,
+        analysis.baseline.summary.chillPortions.median,
+        analysis.future.summary.chillPortions.median,
       )
     : 0;
 
@@ -359,7 +356,9 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
           </p>
         )}
         <OptionPicker
-          crops={visibleCrops}
+          crops={suited}
+          struggling={struggling}
+          futureMedianPortions={futureMedianPortions}
           value={options}
           onChange={setOptions}
           filterState={analysis ? "filtered" : "pre-location"}
@@ -413,14 +412,13 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
               <p className="max-w-[62ch] text-xl leading-snug">
                 At {analysis.location.label}, a typical winter gave about{" "}
                 <strong className="tabular">
-                  {fmtInt(analysis.baseline.summary.chillHours.median)}
+                  {fmtInt(analysis.baseline.summary.chillPortions.median)}
                 </strong>{" "}
-                chill hours in {analysis.baseline.period[0]}–
-                {analysis.baseline.period[1]}. For {analysis.future.period[0]}–
-                {analysis.future.period[1]}, the years a tree planted now spends
-                cropping, it’s projected at about{" "}
+                chill portions in {analysis.baseline.period[0]}–{analysis.baseline.period[1]}. For{" "}
+                {analysis.future.period[0]}–{analysis.future.period[1]}, the years a tree planted now
+                spends cropping, it’s projected at about{" "}
                 <strong className="tabular">
-                  {fmtInt(analysis.future.summary.chillHours.median)}
+                  {fmtInt(analysis.future.summary.chillPortions.median)}
                 </strong>
                 {change < 0
                   ? `, ${Math.abs(change)}% less.`
@@ -428,7 +426,10 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
                     ? `, ${change}% more.`
                     : ", about the same."}
               </p>
-
+              <p className="-mt-5 max-w-[62ch] text-sm text-muted">
+                Chill portions are the winter-chill measure Australian fruit research uses (Dynamic Model).
+                Nurseries often quote chill hours instead; we convert those for you.
+              </p>
               <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-card p-3">
                 <button
                   type="button"
@@ -474,6 +475,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
                 </p>
               )}
 
+              <OptionResults crops={crops} />
               <SeasonsPanel analysis={analysis} />
               <ChillChart analysis={analysis} crops={crops} />
               <Brief

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { CropOption } from '../shared/crops';
+import { withPortions, type CropOption } from '../shared/crops';
+import { hoursToPortions } from '../shared/chillConversion';
 import { appropriateCrops } from '../shared/appropriateCrops';
 import { rankCrops } from '../shared/ranking';
 import { evaluateCrop, type YearStat } from '../shared/seasons';
@@ -14,7 +15,7 @@ import { evaluateCrop, type YearStat } from '../shared/seasons';
 function winterYear(year: number, chillHours: number): YearStat {
   return {
     year,
-    winter: { chillHours, chillPortions: 0 },
+    winter: { chillHours, chillPortions: hoursToPortions(chillHours) },
     spring: null,
     summer: null,
     autumn: null,
@@ -30,7 +31,7 @@ function userCrop(id: string, name: string, chill: number): CropOption {
     type: 'Your figures',
     category: 'stone fruit',
     heatNote: '',
-    winter: { chillHours: [chill, chill], indicative: true, source: 'Your own figure' },
+    winter: withPortions({ chillHours: [chill, chill], indicative: true, source: 'Your own figure' }),
     spring: null,
     summer: null,
   };
@@ -44,7 +45,7 @@ const poorWinters: YearStat[] = [100, 120, 110, 130, 90, 105].map((h, i) => wint
 describe('user crop flows through the engine like a built-in', () => {
   it('spring/summer are no-data and overall === the winter verdict', () => {
     const c = userCrop('user-abc', 'Mango', 300);
-    const evalResult = evaluateCrop(c, 'Mango, your figures', richWinters, richWinters, 300);
+    const evalResult = evaluateCrop(c, 'Mango, your figures', richWinters, richWinters);
 
     const spring = evalResult.seasons.find((s) => s.season === 'spring');
     const summer = evalResult.seasons.find((s) => s.season === 'summer');
@@ -58,13 +59,13 @@ describe('user crop flows through the engine like a built-in', () => {
 
   it('a viable user crop is included by appropriateCrops', () => {
     const c = userCrop('user-viable', 'Fig', 400);
-    const evalResult = evaluateCrop(c, 'Fig', richWinters, richWinters, 400);
+    const evalResult = evaluateCrop(c, 'Fig', richWinters, richWinters);
     expect(appropriateCrops([evalResult]).map((e) => e.id)).toEqual(['user-viable']);
   });
 
   it('a not-viable user crop is excluded by appropriateCrops', () => {
     const c = userCrop('user-cold', 'Cherry-high-chill', 1000);
-    const evalResult = evaluateCrop(c, 'High chill', poorWinters, poorWinters, 1000);
+    const evalResult = evaluateCrop(c, 'High chill', poorWinters, poorWinters);
     expect(evalResult.overall).toBe('not-viable');
     expect(appropriateCrops([evalResult])).toEqual([]);
   });
@@ -72,8 +73,8 @@ describe('user crop flows through the engine like a built-in', () => {
   it('ranks within a mixed list with no special-casing', () => {
     const builtinLike = userCrop('apple-like', 'Apple', 400); // id has no user- prefix: acts as a built-in
     const user = userCrop('user-xyz', 'Mango', 400);
-    const builtinEval = evaluateCrop(builtinLike, 'Apple', richWinters, richWinters, 400);
-    const userEval = evaluateCrop(user, 'Mango', richWinters, richWinters, 400);
+    const builtinEval = evaluateCrop(builtinLike, 'Apple', richWinters, richWinters);
+    const userEval = evaluateCrop(user, 'Mango', richWinters, richWinters);
 
     const ranked = rankCrops([userEval, builtinEval]);
     // Both viable; deterministic tie-break is by label then id -> Apple before Mango.

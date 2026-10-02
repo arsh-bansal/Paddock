@@ -17,6 +17,7 @@
  * `CROP_OPTIONS` is therefore synchronously available (used at render time by the planner/picker).
  */
 import { z } from 'zod';
+import { CONVERSION_SOURCE, hoursToPortions } from './chillConversion';
 import rawCrops from './crops.data.json';
 
 export interface Sourced {
@@ -32,8 +33,14 @@ export interface CropOption {
   type: string;
   category: 'stone fruit' | 'pome fruit' | 'cherry';
   winter: Sourced & {
-    /** chill-hour range for this class (Weinberger 0–7.2 °C model) */
+    /** chill-hour range for this class (Weinberger 0–7.2 °C model), shown to growers */
     chillHours: [number, number];
+    /** chill-portion range (Dynamic Model). THIS is what winter is scored on. */
+    chillPortions: [number, number];
+    /** true when chillPortions was converted from chillHours rather than sourced directly */
+    portionsDerived: boolean;
+    /** where chillPortions came from */
+    portionsSource: string;
   };
   spring:
     | (Sourced & {
@@ -75,7 +82,14 @@ const cropSchema = z.object({
     chillHours: z
       .tuple([z.number().int().nonnegative(), z.number().int().nonnegative()])
       .refine(([lo, hi]) => lo <= hi, 'chillHours must be [min, max] with min <= max'),
-  }),
+    // Optional: a directly sourced Dynamic Model requirement. When absent it is converted from
+    // chillHours (Brunt et al. 2017 Table 1) and flagged as derived.
+    chillPortions: z
+      .tuple([z.number().nonnegative(), z.number().nonnegative()])
+      .refine(([lo, hi]) => lo <= hi, 'chillPortions must be [min, max] with min <= max')
+      .optional(),
+    portionsSource: z.string().optional(),
+  }).refine((w) => !w.chillPortions || Boolean(w.portionsSource), 'chillPortions needs a portionsSource'),
   spring: sourced
     .extend({
       floweringMonths: z.array(z.number().int().min(1).max(12)).min(1),
@@ -104,17 +118,43 @@ const cropsSchema = z
  * identical to `CropOption`, so the cast is a formality; we keep the hand-written interfaces as the
  * public types so no downstream type identity changes. `Object.freeze` guards the read-only singleton.
  */
-export const CROP_OPTIONS: CropOption[] = Object.freeze(cropsSchema.parse(rawCrops)) as CropOption[];
-
-export function cropLabel(c: CropOption): string {
-  return `${c.crop}, ${c.type.toLowerCase()}`;
+/** Fill in the scoring requirement (chill portions), converting from chill hours when not sourced. */
+export function withPortions<W extends { chillHours: [number, number]; chillPortions?: [number, number]; portionsSource?: string }>(
+  w: W,
+): W & { chillPortions: [number, number]; portionsDerived: boolean; portionsSource: string } {
+  if (w.chillPortions) return { ...w, chillPortions: w.chillPortions, portionsDerived: false, portionsSource: w.portionsSource ?? '' };
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+  return {
+    ...w,
+    chillPortions: [round1(hoursToPortions(w.chillHours[0])), round1(hoursToPortions(w.chillHours[1]))],
+    portionsDerived: true,
+    portionsSource: CONVERSION_SOURCE,
+  };
 }
 
-/** Default chill requirement used for scoring: the middle of the class range. */
+export const CROP_OPTIONS: CropOption[] = Object.freeze(
+  cropsSchema.parse(rawCrops).map((c) => ({ ...c, winter: withPortions(c.winter) })),
+) as CropOption[];
+
+/** Words that keep their capital letter inside a label (proper adjectives). */
+const PROPER = /^(Japanese|European|Chinese|Asian|American)\b/;
+
+/** "Plum, Japanese types", "Peach / nectarine, standard-chill varieties". */
+export function cropLabel(c: CropOption): string {
+  const type = PROPER.test(c.type) ? c.type : c.type.charAt(0).toLowerCase() + c.type.slice(1);
+  return `${c.crop}, ${type}`;
+}
+
+/** Default chill-HOURS figure shown in the "your variety needs" box: the middle of the class range. */
 export function defaultRequirement(c: CropOption): number {
   return Math.round((c.winter.chillHours[0] + c.winter.chillHours[1]) / 2);
 }
 
+/** Default chill-PORTIONS requirement used for scoring: the middle of the portions range. */
+export function defaultPortions(c: CropOption): number {
+  return Math.round(((c.winter.chillPortions[0] + c.winter.chillPortions[1]) / 2) * 10) / 10;
+}
+
 export function hasIndicativeData(c: CropOption): boolean {
-  return c.winter.indicative || Boolean(c.spring?.indicative) || Boolean(c.summer?.indicative);
+  return c.winter.indicative || c.winter.portionsDerived || Boolean(c.spring?.indicative) || Boolean(c.summer?.indicative);
 }

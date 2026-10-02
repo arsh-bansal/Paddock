@@ -74,7 +74,8 @@ function year(i: number, p: { chill?: number; frostSep?: number; hot?: number })
   if (p.frostSep) frost[2] = [p.frostSep, p.frostSep, p.frostSep, 0, 0];
   return {
     year: 2000 + i,
-    winter: p.chill == null ? null : { chillHours: p.chill, chillPortions: p.chill / 15 },
+    // `chill` is in chill portions: winter is scored on portions.
+    winter: p.chill == null ? null : { chillHours: p.chill * 15, chillPortions: p.chill },
     spring: { frostDays: frost },
     summer: p.hot == null ? null : { hotDays: p.hot, extremeDays: 0, longestHotSpell: 1 },
     autumn: null,
@@ -146,7 +147,7 @@ describe('overall verdict', () => {
   });
   it('evaluates all three seasons for a crop', () => {
     const yrs = tenYears((i) => ({ chill: 1000, hot: i % 3, frostSep: 0 }));
-    const e = evaluateCrop(CROP_OPTIONS[0], 'Peach', yrs, yrs, 750);
+    const e = evaluateCrop(CROP_OPTIONS[0], 'Peach', yrs, yrs, { chillHoursOverride: 750 });
     expect(e.seasons.map((s) => s.season)).toEqual(['winter', 'spring', 'summer']);
     expect(e.overall).toBe('viable');
   });

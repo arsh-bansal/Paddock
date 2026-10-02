@@ -26,8 +26,16 @@ export async function explainResult(analysis: ClimateAnalysis, crops: CropEvalua
   const facts = {
     location: analysis.location.label,
     periods: { then, projected: next },
-    winter: { typicalChillHours: { then: round(b.chillHours.median), projected: round(f.chillHours.median) }, poorWinterChillHoursProjected: round(f.chillHours.p10) },
-    spring: { frostDaysAtOrBelow0CAugToOct: { then: one(b.springFrostDays.mean), projected: one(f.springFrostDays.mean) } },
+    winter: {
+      measure: 'chill portions (Dynamic Model, the measure Australian fruit research uses)',
+      typicalChillPortions: { then: round(b.chillPortions.median), projected: round(f.chillPortions.median) },
+      poorWinterChillPortionsProjected: round(f.chillPortions.p10),
+      typicalChillHoursForReference: { then: round(b.chillHours.median), projected: round(f.chillHours.median) },
+    },
+    spring: {
+      frostDaysAtOrBelow0CAugToOct: { then: one(b.springFrostDays.mean), projected: one(f.springFrostDays.mean) },
+      note: 'Frost comes from a 10-25 km weather grid and underestimates frost on cold blocks. Call it a district estimate and never present it as reassurance.',
+    },
     summer: {
       hotDaysAtOrAbove35C: { then: one(b.hotDays.mean), projected: one(f.hotDays.mean) },
       typicalLongestHotSpellDays: { then: round(b.longestHotSpell.median), projected: round(f.longestHotSpell.median) },
@@ -40,6 +48,7 @@ export async function explainResult(analysis: ClimateAnalysis, crops: CropEvalua
     crops: crops.map((c) => ({
       crop: c.label,
       overall: c.overall,
+      chillPortionsNeeded: c.chillPortionsRequirement,
       seasons: c.seasons
         .filter((s) => s.verdict !== 'no-data')
         .map((s) => ({

@@ -90,6 +90,8 @@ const explainSchema = z.object({
         overall: verdictEnum,
         heatNote: z.string().max(300),
         chillRequirement: z.number().min(0).max(3000),
+        chillPortionsRequirement: z.number().min(0).max(300),
+        portionsConverted: z.boolean(),
         seasons: z
           .array(
             z.object({
@@ -99,6 +101,7 @@ const explainSchema = z.object({
               future: z.number().nullable(),
               threshold: z.number().nullable(),
               indicative: z.boolean(),
+              margin: z.number().nullable().optional(),
             }),
           )
           .max(3),

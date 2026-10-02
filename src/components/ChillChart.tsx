@@ -21,14 +21,14 @@ interface Row {
 
 export function ChillChart({ analysis, crops }: Props) {
   const { future } = analysis;
-  const chill = future.summary.chillHours;
-  const baseChill = analysis.baseline.summary.chillHours;
+  const chill = future.summary.chillPortions;
+  const baseChill = analysis.baseline.summary.chillPortions;
   const options = crops.map((c) => {
     const winter = c.seasons.find((s) => s.season === 'winter')!;
-    return { id: c.id, label: c.label, requirement: c.chillRequirement, verdict: winter.verdict };
+    return { id: c.id, label: c.label, requirement: c.chillPortionsRequirement, verdict: winter.verdict };
   });
   const rows: Row[] = [];
-  const obs = new Map(analysis.observed.flatMap((s) => (s.winter ? [[s.year, s.winter.chillHours] as const] : [])));
+  const obs = new Map(analysis.observed.flatMap((s) => (s.winter ? [[s.year, s.winter.chillPortions] as const] : [])));
   for (let y = 1995; y <= future.period[1]; y++) {
     const row: Row = { year: y };
     if (obs.has(y)) row.observed = obs.get(y);
@@ -41,20 +41,20 @@ export function ChillChart({ analysis, crops }: Props) {
 
   const reqs = options.map((o) => o.requirement);
   const rawMax = Math.max(chill.p90, baseChill.p90, ...reqs, ...obs.values()) * 1.08;
-  const step = [100, 200, 250, 500, 1000].find((s) => rawMax / s <= 6) ?? 1000;
+  const step = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find((s) => rawMax / s <= 6) ?? 1000;
   const yMax = Math.ceil(rawMax / step) * step;
   const yTicks = Array.from({ length: yMax / step + 1 }, (_, i) => i * step);
 
   const summary =
-    `Chill hours per winter at ${analysis.location.label}. Observed winters ${[...obs.keys()][0]}–` +
+    `Chill portions per winter at ${analysis.location.label}. Observed winters ${[...obs.keys()][0]}–` +
     `${[...obs.keys()].at(-1)}; projected typical winter ${future.period[0]}–${future.period[1]} about ` +
-    `${fmtInt(chill.median)} hours, poor winter about ${fmtInt(chill.p10)} hours.`;
+    `${fmtInt(chill.median)} portions, poor winter about ${fmtInt(chill.p10)} portions.`;
 
   return (
     <figure className="rounded-2xl border border-line bg-card p-4 sm:p-6">
       <figcaption className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="text-xl font-bold">Winter chill at your block</h3>
-        <span className="text-sm text-muted">Chill hours per winter, 1 April to 30 September</span>
+        <span className="text-sm text-muted">Chill portions per winter, 1 April to 30 September</span>
       </figcaption>
       <div className="h-[340px] w-full" role="img" aria-label={summary}>
         <ResponsiveContainer>
@@ -75,7 +75,7 @@ export function ChillChart({ analysis, crops }: Props) {
             ))}
             <Tooltip
               formatter={(v: unknown, name: unknown) =>
-                Array.isArray(v) ? [`${fmtInt(v[0])}–${fmtInt(v[1])} h`, String(name)] : [`${fmtInt(Number(v))} h`, String(name)]}
+                Array.isArray(v) ? [`${fmtInt(v[0])}–${fmtInt(v[1])} portions`, String(name)] : [`${fmtInt(Number(v))} portions`, String(name)]}
               labelFormatter={(y: unknown) => `Winter ${y}`}
               contentStyle={{ borderRadius: 8, borderColor: '#d8dbd0', fontFamily: 'Atkinson Hyperlegible, sans-serif' }}
             />
@@ -86,7 +86,7 @@ export function ChillChart({ analysis, crops }: Props) {
         {[...options].sort((a, b) => b.requirement - a.requirement).map((o) => (
           <li key={o.id} className="flex items-center gap-2">
             <svg width="22" height="6" aria-hidden><line x1="0" y1="3" x2="22" y2="3" stroke={VERDICT_STROKE[o.verdict]} strokeWidth="2" strokeDasharray="2 3" /></svg>
-            <span>{o.label} <span className="tabular text-muted">{fmtInt(o.requirement)} h</span></span>
+            <span>{o.label} <span className="tabular text-muted">{fmtInt(o.requirement)} portions</span></span>
           </li>
         ))}
       </ul>

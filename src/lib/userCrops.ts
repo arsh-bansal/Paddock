@@ -18,7 +18,7 @@
  */
 import { createStore, del, entries, set, type UseStore } from 'idb-keyval';
 import { z } from 'zod';
-import type { CropOption } from '../../shared/crops';
+import { withPortions, type CropOption } from '../../shared/crops';
 
 /** Longest crop name we persist; matches the loader's string sanity caps. */
 const NAME_MAX = 60;
@@ -129,7 +129,7 @@ function toCropOption(rec: StoredUserCrop): CropOption {
     type: USER_CROP_TYPE,
     category: DEFAULT_CATEGORY,
     heatNote: '',
-    winter: { chillHours: rec.chillHours, indicative: true, source: USER_CROP_SOURCE },
+    winter: withPortions({ chillHours: rec.chillHours, indicative: true, source: USER_CROP_SOURCE }),
     spring: null,
     summer: null,
   };

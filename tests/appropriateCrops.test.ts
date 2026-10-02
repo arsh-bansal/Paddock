@@ -8,7 +8,7 @@ function winter(future: number, indicative = false): SeasonResult {
 }
 
 function evalCrop(id: string, overall: SeasonVerdict, label = id): CropEvaluation {
-  return { id, label, overall, seasons: [winter(50)], heatNote: '', chillRequirement: 500 };
+  return { id, label, overall, seasons: [winter(50)], heatNote: '', chillRequirement: 500, chillPortionsRequirement: 40, portionsConverted: false };
 }
 
 describe('appropriateCrops verdict filter', () => {

@@ -17,17 +17,20 @@ export function Methods({ analysis }: { analysis: ClimateAnalysis }) {
           Projections come from CMIP6 HighResMIP runs served by the Open-Meteo Climate API.
         </p>
         <p>
-          <strong>Winter.</strong> Hourly temperatures are rebuilt from daily min and max using day length (Linvill method). Chill hours count hours between 0 and 7.2 °C from April to September.
-          Chill Portions (Dynamic Model), which researchers prefer for warmer climates, are a cross-check: typical winter {Math.round(analysis.baseline.summary.chillPortions.median)} portions
-          then, about {Math.round(analysis.future.summary.chillPortions.median)} projected. A crop is a good fit if a poor winter (worst 1 in 10) still meets its need.
+          <strong>Winter.</strong> Hourly temperatures are rebuilt from daily min and max using day length (Linvill method), April to September. Winter is scored in
+          Chill Portions (Dynamic Model), the measure Australian fruit research uses and one that warming inflates less than chill hours. Most published crop needs are in
+          chill hours, so they’re converted with the cross-model table in Brunt et al. (2017, Hort Innovation cherry guide, Table 1); converted figures are marked.
+          Chill hours (0–7.2 °C) are still shown for reference. A crop is a good fit if a poor winter (worst 1 in 10) still meets its need.
         </p>
         <p>
-          <strong>Spring.</strong> We count days in each crop’s flowering months when the minimum falls to its frost-damage temperature. A good fit sees that in no more than 1 year in 10; risky is up to 3 in 10.
-          This doesn’t yet allow for trees flowering earlier as winters warm.
+          <strong>Spring.</strong> We count days in each crop’s flowering months when the minimum falls to its frost-damage temperature (full-bloom figures from the WSU
+          critical-temperature tables, a US source). A good fit sees that in no more than 1 year in 10; risky is up to 3 in 10. Treat this as a district estimate: the
+          weather grid smooths out cold nights, so it undercounts frost, especially in frost hollows. It also doesn’t yet allow for trees flowering earlier as winters warm.
         </p>
         <p>
           <strong>Summer and autumn.</strong> Hot days are counted December to February (labelled by the January year), along with the longest run of days at 35 °C or hotter.
-          A crop is a good fit if even a hot summer (worst 1 in 10) stays within its tolerance.
+          Summer heat is shown for every crop but not scored yet: we found no published “days over 35 °C” limit for these crops, and a made-up limit would mark
+          crops as failing in districts where they grow well today.
         </p>
         <p>
           <strong>Water.</strong> Evaporation is estimated with the Hargreaves method from temperature and day length, so it can be worked out the same way for the past and the future.
@@ -35,7 +38,7 @@ export function Methods({ analysis }: { analysis: ClimateAnalysis }) {
         </p>
         <p>
           <strong>Limits.</strong> Three models and one emissions pathway don’t cover every possible future. The grid is roughly 10–25 km, so frost hollows and slopes
-          on your block can differ. Crop thresholds marked indicative are rules of thumb still being replaced with sourced figures.
+          on your block can differ. Thresholds marked indicative were converted between chill measures or come from non-Australian sources.
         </p>
       </div>
     </details>
