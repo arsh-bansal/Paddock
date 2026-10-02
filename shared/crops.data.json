@@ -1,0 +1,213 @@
+[
+  {
+    "id": "peach-standard",
+    "crop": "Peach / nectarine",
+    "type": "Standard-chill varieties",
+    "category": "stone fruit",
+    "heatNote": "Very hot days during fruit development can reduce fruit size and quality.",
+    "winter": {
+      "chillHours": [400, 800],
+      "indicative": false,
+      "source": "Chill Hours Tracker (freshactivations.com.au), net 0-7.2C model (400h); US extension cross-check (upper 800h, plain Chill Hours)"
+    },
+    "spring": {
+      "floweringMonths": [8],
+      "frostDamageC": -2.8,
+      "indicative": true,
+      "source": ""
+    },
+    "summer": {
+      "hotDaysTolerated": "medium",
+      "indicative": true
+    }
+  },
+  {
+    "id": "peach-low",
+    "crop": "Peach / nectarine",
+    "type": "Low-chill varieties",
+    "category": "stone fruit",
+    "heatNote": "Low-chill types can flower early, which raises spring frost exposure.",
+    "winter": {
+      "chillHours": [200, 400],
+      "indicative": false,
+      "source": "Chill Hours Tracker (freshactivations.com.au), net 0-7.2C model"
+    },
+    "spring": {
+      "floweringMonths": [7, 8],
+      "frostDamageC": -2.8,
+      "indicative": true
+    },
+    "summer": {
+      "hotDaysTolerated": "medium",
+      "indicative": true
+    }
+  },
+  {
+    "id": "apricot",
+    "crop": "Apricot",
+    "type": "Standard varieties",
+    "category": "stone fruit",
+    "heatNote": "Flowers early, so spring frost is often a bigger risk than summer heat.",
+    "winter": {
+      "chillHours": [300, 600],
+      "indicative": true,
+      "source": "US extension (Purdue 500-600) only; no Australian Chill-Hour figure located - needs human verification"
+    },
+    "spring": {
+      "floweringMonths": [8],
+      "frostDamageC": -2.8,
+      "indicative": true
+    },
+    "summer": {
+      "hotDaysTolerated": "medium",
+      "indicative": true
+    }
+  },
+  {
+    "id": "plum-japanese",
+    "crop": "Plum",
+    "type": "Japanese types",
+    "category": "stone fruit",
+    "heatNote": "Generally more heat tolerant than European plums.",
+    "winter": {
+      "chillHours": [118, 685],
+      "indicative": true,
+      "source": "Fadon et al. 2020 (CH 0-7.2C basis), via figure caption/snippet - non-AU, needs human verification"
+    },
+    "spring": {
+      "floweringMonths": [8, 9],
+      "frostDamageC": -2.8,
+      "indicative": true
+    },
+    "summer": {
+      "hotDaysTolerated": "low",
+      "indicative": true
+    }
+  },
+  {
+    "id": "plum-european",
+    "crop": "Plum",
+    "type": "European / prune types",
+    "category": "stone fruit",
+    "heatNote": "Higher chill need makes these the first to struggle as winters warm.",
+    "winter": {
+      "chillHours": [579, 1323],
+      "indicative": true,
+      "source": "Fadon et al. 2020 (CH 0-7.2C basis), via figure caption/snippet - non-AU, needs human verification"
+    },
+    "spring": {
+      "floweringMonths": [9],
+      "frostDamageC": -2.8,
+      "indicative": true
+    },
+    "summer": {
+      "hotDaysTolerated": "medium",
+      "indicative": true
+    }
+  },
+  {
+    "id": "cherry-standard",
+    "crop": "Sweet cherry",
+    "type": "Standard varieties",
+    "category": "cherry",
+    "heatNote": "Hot weather around flowering and fruit set is a key risk, and hot summers can cause doubled fruit the next season.",
+    "winter": {
+      "chillHours": [600, 800],
+      "indicative": false,
+      "source": "Chill Hours Tracker (freshactivations.com.au), net 0-7.2C model; Bing/Sylvia/Summit ~700h"
+    },
+    "spring": {
+      "floweringMonths": [9, 10],
+      "frostDamageC": -2.2,
+      "indicative": true
+    },
+    "summer": {
+      "hotDaysTolerated": "high",
+      "indicative": true
+    }
+  },
+  {
+    "id": "cherry-low",
+    "crop": "Sweet cherry",
+    "type": "Low-chill varieties",
+    "category": "cherry",
+    "heatNote": "Newer low-chill lines; check local trial results before committing.",
+    "winter": {
+      "chillHours": [300, 500],
+      "indicative": false,
+      "source": "Chill Hours Tracker (freshactivations.com.au, Stella/Lapin ~500 net) + Hort Innovation 'Low' rating converted to Chill Hours (300-500)"
+    },
+    "spring": {
+      "floweringMonths": [8, 9],
+      "frostDamageC": -2.2,
+      "indicative": true
+    },
+    "summer": {
+      "hotDaysTolerated": "high",
+      "indicative": true
+    }
+  },
+  {
+    "id": "apple-mainstream",
+    "crop": "Apple",
+    "type": "Mainstream varieties",
+    "category": "pome fruit",
+    "heatNote": "Fruit sunburn risk rises with more days at or above 35 °C; netting is common.",
+    "winter": {
+      "chillHours": [550, 1000],
+      "indicative": false,
+      "source": "Chill Hours Tracker (freshactivations.com.au), net 0-7.2C model (Pink Lady/Gala 550h); US extension cross-check (upper 1000h)"
+    },
+    "spring": {
+      "floweringMonths": [9, 10],
+      "frostDamageC": -2.2,
+      "indicative": true
+    },
+    "summer": {
+      "hotDaysTolerated": "high",
+      "indicative": true
+    }
+  },
+  {
+    "id": "apple-low",
+    "crop": "Apple",
+    "type": "Low-chill varieties",
+    "category": "pome fruit",
+    "heatNote": "Same sunburn exposure as other apples; market demand may differ.",
+    "winter": {
+      "chillHours": [200, 400],
+      "indicative": true,
+      "source": "US low-chill apple classes only (Mississippi State P3067); no AU figure located - needs human verification"
+    },
+    "spring": {
+      "floweringMonths": [8, 9],
+      "frostDamageC": -2.2,
+      "indicative": true
+    },
+    "summer": {
+      "hotDaysTolerated": "high",
+      "indicative": true
+    }
+  },
+  {
+    "id": "pear",
+    "crop": "European pear",
+    "type": "Standard varieties",
+    "category": "pome fruit",
+    "heatNote": "Heat stress and sunburn risk in hot summers.",
+    "winter": {
+      "chillHours": [700, 900],
+      "indicative": false,
+      "source": "Chill Hours Tracker (freshactivations.com.au), net 0-7.2C model (most dessert varieties 700h); US extension cross-check (upper 900h)"
+    },
+    "spring": {
+      "floweringMonths": [9],
+      "frostDamageC": -2.2,
+      "indicative": true
+    },
+    "summer": {
+      "hotDaysTolerated": "medium",
+      "indicative": true
+    }
+  }
+]
