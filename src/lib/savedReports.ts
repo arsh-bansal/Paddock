@@ -64,6 +64,13 @@ async function guard<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+/** Strictly increasing save times, so two saves in the same millisecond still sort correctly. */
+let lastSavedMs = 0;
+function nextSavedAt(): string {
+  lastSavedMs = Math.max(Date.now(), lastSavedMs + 1);
+  return new Date(lastSavedMs).toISOString();
+}
+
 const newId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -88,7 +95,7 @@ export async function saveReport(
       ...input,
       id: newId(),
       version: RECORD_VERSION,
-      savedAt: new Date().toISOString(),
+      savedAt: nextSavedAt(),
     };
     const m: SavedReportMeta = {
       id: record.id,
