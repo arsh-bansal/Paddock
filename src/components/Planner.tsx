@@ -1,13 +1,17 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, FileDown, Save } from "lucide-react";
-import { CROP_OPTIONS, cropLabel } from "../../shared/crops";
+import { cropLabel, defaultRequirement, type CropOption } from "../../shared/crops";
 import { evaluateCrop, type CropEvaluation } from "../../shared/seasons";
+import { rankCrops } from "../../shared/ranking";
+import { filterAppropriateByChill } from "../../shared/chillFilter";
 import type { ClimateAnalysis } from "../../shared/types";
 import { fetchClimate } from "../lib/api";
 import { fmtInt, pctChange } from "../lib/format";
 import { loadReport, saveReport } from "../lib/savedReports";
+import { useCombinedCrops } from "../lib/useCombinedCrops";
 import { downloadReport } from "../report/download";
 import { AdaptationNotes } from "./AdaptationNotes";
+import { AddCropForm } from "./AddCropForm";
 import { Brief, briefSignature, type BriefState } from "./Brief";
 import { ChillChart } from "./ChillChart";
 import { LocationPicker, type PickedLocation } from "./LocationPicker";
@@ -17,7 +21,6 @@ import {
   OptionPicker,
   type OptionState,
 } from "./OptionPicker";
-import { OptionResults } from "./OptionResults";
 import { SavedReports } from "./SavedReports";
 import { SeasonsPanel } from "./SeasonsPanel";
 
@@ -52,38 +55,48 @@ function Step({
 }
 
 function evaluateAll(
+  crops: CropOption[],
   analysis: ClimateAnalysis,
   options: OptionState,
 ): CropEvaluation[] {
-  return CROP_OPTIONS.filter((c) => options[c.id]?.selected).map((c) =>
-    evaluateCrop(
-      c,
-      cropLabel(c),
-      analysis.baseline.years,
-      analysis.future.years,
-      options[c.id].requirement,
-    ),
-  );
+  const evaluated = crops
+    .filter((c) => options[c.id]?.selected)
+    .map((c) =>
+      evaluateCrop(
+        c,
+        cropLabel(c),
+        analysis.baseline.years,
+        analysis.future.years,
+        options[c.id].requirement,
+      ),
+    );
+  // Order the considered crops best-fit-first. All consumers already accept CropEvaluation[].
+  return rankCrops(evaluated);
 }
 
-const RANK = {
-  viable: 0,
-  "at-risk": 1,
-  "not-viable": 2,
-  "no-data": 3,
-} as const;
+/** Crops sent to the AI brief are capped client-side to stay within /api/explain's max(25). */
+const BRIEF_CROP_CAP = 25;
+
+/** The already-ranked list's first crop, if it is viable. */
 function topCrop(crops: CropEvaluation[]): string | null {
-  const best = [...crops].sort((a, b) => RANK[a.overall] - RANK[b.overall])[0];
+  const best = rankCrops(crops)[0];
   return best && best.overall === "viable" ? best.label : null;
 }
 
-/** Saved option state may predate crops added since; fill the gaps with defaults. */
-function mergeOptions(saved: OptionState): OptionState {
-  const defaults = initialOptionState();
+/**
+ * Reconcile a saved/previous `OptionState` with the CURRENT crop list (built-ins + user crops).
+ * Known ids keep their saved selection + requirement verbatim; ids present now but missing from the
+ * saved state (e.g. crops added since save, or user crops that just loaded) default to selected:true
+ * with their own default chill figure (`defaultRequirement` = the user's figure for a `[v,v]` range).
+ * Ids in the saved state but absent from the current list (e.g. a since-deleted user crop referenced
+ * by a saved report) are simply dropped — dangling ids never resurrect and never crash the load
+ * (design §4.6/§4.9). No storage schema bump.
+ */
+function mergeOptions(crops: CropOption[], saved: OptionState): OptionState {
   return Object.fromEntries(
-    Object.keys(defaults).map((id) => [
-      id,
-      saved[id] ?? { ...defaults[id], selected: false },
+    crops.map((c) => [
+      c.id,
+      saved[c.id] ?? { selected: true, requirement: defaultRequirement(c) },
     ]),
   );
 }
@@ -92,6 +105,10 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
   const [location, setLocation] = useState<PickedLocation | null>(null);
   const [options, setOptions] = useState<OptionState>(initialOptionState);
   const [analysis, setAnalysis] = useState<ClimateAnalysis | null>(null);
+  // Whether the grower has explicitly asked for the full Step-3 analysis/ranking ("Check my block").
+  // This is deliberately SEPARATE from `analysis != null`: a preset auto-fetch sets `analysis` (so
+  // Step 2 can filter) WITHOUT setting this flag, so Step 3 stays hidden until the button is pressed.
+  const [resultsRequested, setResultsRequested] = useState(false);
   const [brief, setBrief] = useState<BriefState | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,28 +118,72 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
   const [savedListKey, setSavedListKey] = useState(0);
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  const selectedCount = CROP_OPTIONS.filter(
-    (c) => options[c.id].selected,
-  ).length;
+  // The unified crop list: built-ins (synchronous baseline) + user crops (async overlay).
+  const { combined, userCrops, status, error: cropsError, addCrop, editCrop, removeCrop } =
+    useCombinedCrops();
+
+  // Back-fill `OptionState` whenever the combined list changes (user crops load / are added). New
+  // ids default to selected:true with their own default chill figure; dangling ids are dropped. This
+  // is a no-op (same object identity in effect comparison aside) when nothing changed, and never
+  // double-inserts under StrictMode because it reconciles against the authoritative crop list.
+  useEffect(() => {
+    setOptions((prev) => {
+      const next = mergeOptions(combined, prev);
+      // Avoid a state update (and re-render loop) when the reconciliation is a no-op.
+      const sameKeys =
+        Object.keys(next).length === Object.keys(prev).length &&
+        Object.keys(next).every(
+          (id) =>
+            prev[id] &&
+            prev[id].selected === next[id].selected &&
+            prev[id].requirement === next[id].requirement,
+        );
+      return sameKeys ? prev : next;
+    });
+  }, [combined]);
+
+  // Tracks the preset identity we have already kicked off an auto-run for. A ref (not state) so it
+  // survives React 19 StrictMode's dev-only double-invoke of effects without triggering a second
+  // fetch, and so updating it never causes a re-render/effect loop.
+  const autoRanPresetKey = useRef<string | null>(null);
+
+  // Mirror `analysis` into a ref so the auto-run effect can read its *current* value without
+  // listing it as a dependency (which would re-trigger the effect and risk a fetch loop).
+  const analysisRef = useRef<ClimateAnalysis | null>(null);
+  analysisRef.current = analysis;
+
   const crops = useMemo(
-    () => (analysis ? evaluateAll(analysis, options) : []),
-    [analysis, options],
+    () => (analysis ? evaluateAll(combined, analysis, options) : []),
+    [combined, analysis, options],
   );
-  const signature = analysis ? briefSignature(analysis, crops) : null;
+  // The AI brief gets the top-ranked crops only, capped so the request can never exceed
+  // /api/explain's max(25) no matter how large the catalogue grows (design 4.6).
+  const briefCrops = useMemo(() => crops.slice(0, BRIEF_CROP_CAP), [crops]);
+  // Step-2 DISPLAY filter: once a block's climate is known, narrow the picker to crops whose minimum
+  // chill need the block's future median chill can meet. This is a lightweight, chill-only pre-filter
+  // (NOT evaluateCrop/rankCrops) and affects what the picker SHOWS only — `evaluateAll` still runs over
+  // the full `combined` set, so hidden crops keep their OptionState and are still evaluated if selected.
+  const futureMedianChill = analysis
+    ? analysis.future.summary.chillHours.median
+    : NaN;
+  const visibleCrops = useMemo(
+    () => (analysis ? filterAppropriateByChill(combined, futureMedianChill) : combined),
+    [analysis, combined, futureMedianChill],
+  );
+  const signature = analysis ? briefSignature(analysis, briefCrops) : null;
   const currentBrief =
     brief && brief.signature === signature ? brief.text : null;
   const isSaved =
     signature != null &&
     savedSignature === `${signature}|${currentBrief ?? ""}`;
 
-  const run = async () => {
-    if (!location) return;
+  const run = async (target?: PickedLocation) => {
+    const loc = target ?? location;
+    if (!loc) return;
     setLoading(true);
     setError(null);
     try {
-      setAnalysis(
-        await fetchClimate(location.lat, location.lon, location.label),
-      );
+      setAnalysis(await fetchClimate(loc.lat, loc.lon, loc.label));
     } catch (e) {
       setAnalysis(null);
       setError((e as Error).message);
@@ -130,6 +191,34 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
       setLoading(false);
     }
   };
+
+  // HYBRID auto-run (design Option C): picking a PRESET DISTRICT runs the analysis automatically
+  // (preset climate is pre-cached, so this costs no live API call). Manual coordinates and
+  // "Use my location" still require the explicit "Check my block" button.
+  //
+  // Keyed ONLY on the preset identity (presetId + rounded coords) so:
+  //   • switching between presets re-runs once per preset,
+  //   • unrelated re-renders and crop-refine changes (OptionPicker / chill requirement) never
+  //     re-fetch — `options`/`analysis` are deliberately NOT dependencies,
+  //   • the ref guard absorbs StrictMode's double-invoke and prevents concurrent/duplicate fetches.
+  const presetKey = location?.presetId
+    ? `${location.presetId}:${location.lat.toFixed(2)},${location.lon.toFixed(2)}`
+    : null;
+  useEffect(() => {
+    if (!presetKey || !location?.presetId) return;
+    // Already auto-ran (or started) for this exact preset — nothing to do (StrictMode re-invoke).
+    if (autoRanPresetKey.current === presetKey) return;
+    // Analysis for this very location is already loaded (e.g. reopened saved report) — don't refetch.
+    if (analysisRef.current && analysisRef.current.location.label === location.label) {
+      autoRanPresetKey.current = presetKey;
+      return;
+    }
+    // Mark this preset as handled *before* the async fetch so StrictMode's immediate second
+    // invoke (and any re-render) sees it as done and never kicks off a duplicate run.
+    autoRanPresetKey.current = presetKey;
+    void run(location);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetKey]);
 
   const download = async (
     input: {
@@ -182,13 +271,18 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
         return;
       }
       const r = res.report;
-      const opts = mergeOptions(r.options);
+      const opts = mergeOptions(combined, r.options);
       setLocation(r.location);
       setOptions(opts);
       setAnalysis(r.analysis);
+      // A reopened report shows the full Step-3 results immediately (as it did before this gate existed).
+      setResultsRequested(true);
       setBrief(r.brief);
       setError(null);
-      const sig = briefSignature(r.analysis, evaluateAll(r.analysis, opts));
+      const sig = briefSignature(
+        r.analysis,
+        evaluateAll(combined, r.analysis, opts).slice(0, BRIEF_CROP_CAP),
+      );
       setSavedSignature(
         `${sig}|${r.brief?.signature === sig ? r.brief.text : ""}`,
       );
@@ -211,8 +305,8 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
         return;
       }
       const r = res.report;
-      const savedCrops = evaluateAll(r.analysis, mergeOptions(r.options));
-      const sig = briefSignature(r.analysis, savedCrops);
+      const savedCrops = evaluateAll(combined, r.analysis, mergeOptions(combined, r.options));
+      const sig = briefSignature(r.analysis, savedCrops.slice(0, BRIEF_CROP_CAP));
       await download(
         {
           analysis: r.analysis,
@@ -245,25 +339,55 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
       />
 
       <Step n={1} title="Where’s the block?">
-        <LocationPicker value={location} onChange={setLocation} />
+        <LocationPicker
+          value={location}
+          onChange={(loc) => {
+            // A new block invalidates any prior full-results request: hide Step 3 until the grower
+            // presses "Check my block" again for THIS block. (A preset will still auto-fetch climate
+            // for the Step-2 filter via the auto-run effect, but Step 3 stays gated.)
+            setLocation(loc);
+            setResultsRequested(false);
+          }}
+        />
       </Step>
 
       <Step n={2} title="What are you weighing up?">
-        <OptionPicker value={options} onChange={setOptions} />
+        {analysis && (
+          <p className="max-w-[62ch] text-muted">
+            We rank every crop for your block, best fit first. Refine the list below if you want —
+            untick crops or enter your own variety’s chill figure.
+          </p>
+        )}
+        <OptionPicker
+          crops={visibleCrops}
+          value={options}
+          onChange={setOptions}
+          filterState={analysis ? "filtered" : "pre-location"}
+        />
+        <AddCropForm
+          userCrops={userCrops}
+          status={status}
+          loadError={cropsError}
+          onAdd={addCrop}
+          onEdit={editCrop}
+          onDelete={removeCrop}
+        />
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={run}
-            disabled={!location || selectedCount === 0 || loading}
+            onClick={() => {
+              // Explicitly request the full Step-3 analysis/ranking, then run (fetches if needed; a
+              // preset's climate is already cached so this is a cheap cache hit).
+              setResultsRequested(true);
+              void run();
+            }}
+            disabled={!location || loading}
             className="rounded-xl bg-leaf px-6 py-3 text-lg font-bold text-white shadow-sm hover:bg-leaf/90 disabled:opacity-40"
           >
             {loading ? "Checking 50 years of climate…" : "Check my block"}
           </button>
           {!location && (
             <span className="text-muted">Pick a district first.</span>
-          )}
-          {location && selectedCount === 0 && (
-            <span className="text-muted">Tick at least one option.</span>
           )}
         </div>
         {error && (
@@ -276,7 +400,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
         )}
       </Step>
 
-      {analysis && (
+      {analysis && resultsRequested && (
         <div ref={resultsRef} className="scroll-mt-6">
           <Step n={3} title="What the next 20 years look like">
             <div className="reveal space-y-8" aria-live="polite">
@@ -352,10 +476,9 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
 
               <SeasonsPanel analysis={analysis} />
               <ChillChart analysis={analysis} crops={crops} />
-              <OptionResults crops={crops} />
               <Brief
                 analysis={analysis}
-                crops={crops}
+                crops={briefCrops}
                 aiEnabled={aiEnabled}
                 brief={brief}
                 onBrief={setBrief}

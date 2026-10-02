@@ -1,19 +1,23 @@
 /**
- * Crop database (interim). Huu owns the sourced version of this file.
+ * Crop database loader.
  *
- * IMPORTANT — DATA CREDIBILITY
- * Every threshold below is an INDICATIVE PLACEHOLDER (indicative: true, source: '') so the
- * season engine can be built and demoed. They are crop-class rules of thumb, not cultivar
- * figures. Replace each with a sourced value (nursery catalogues, Agriculture Victoria,
- * Hort Innovation, university extension), set indicative: false and fill in `source`.
- * If a value can't be sourced, set that season to null: the app shows "no data" instead of guessing.
+ * The crop catalogue now lives as data in `shared/crops.data.json` — adding or editing a crop is a
+ * data edit, not a code change. This module imports that JSON at build time, validates it with zod
+ * (throwing loudly on bad data so a broken catalogue can never be served silently), and re-exports
+ * the unchanged public API: the `CropOption`/`Sourced` interfaces, the `CROP_OPTIONS` constant, and
+ * the `cropLabel` / `defaultRequirement` / `hasIndicativeData` helpers.
  *
- * Placeholder rules used here:
- *  - spring.frostDamageC = -2 °C for every crop: a common rule-of-thumb critical temperature
- *    for open flowers. Real values differ by crop and bloom stage.
- *  - summer.hotDaysTolerated: app-defined bands by heat sensitivity (high 5, medium 10, low 15
- *    days ≥35 °C per summer). These are NOT published crop tolerances.
+ * DATA CREDIBILITY. Each per-season block carries a `Sourced { indicative, source }` wrapper. When
+ * `indicative` is true the threshold is a rule-of-thumb placeholder still being replaced with a
+ * sourced figure; the UI badges those. Per-field sourcing rationale lives in
+ * `docs/crop-data-sources.md`, the canonical data contract.
+ *
+ * RUNTIME NOTE. `shared/` is consumed by Vite, the esbuild server bundle, tsx and vitest, so this
+ * module uses no Node-only APIs. The JSON is a static build-time import, inlined by every bundler;
+ * `CROP_OPTIONS` is therefore synchronously available (used at render time by the planner/picker).
  */
+import { z } from 'zod';
+import rawCrops from './crops.data.json';
 
 export interface Sourced {
   /** true while the value is a placeholder, not a sourced figure */
@@ -49,81 +53,58 @@ export interface CropOption {
   heatNote: string;
 }
 
-const PLACEHOLDER: Sourced = { indicative: true, source: '' };
+/**
+ * Heat-sensitivity bands → days ≥35 °C tolerated. Mirrors the legacy `HEAT` constants so authors
+ * can write a keyword in the JSON instead of a magic number; the loader expands it.
+ */
 const HEAT = { high: 5, medium: 10, low: 15 } as const;
 
-export const CROP_OPTIONS: CropOption[] = [
-  {
-    id: 'peach-standard', crop: 'Peach / nectarine', type: 'Standard-chill varieties', category: 'stone fruit',
-    winter: { chillHours: [600, 900], ...PLACEHOLDER },
-    spring: { floweringMonths: [8, 9], frostDamageC: -2, ...PLACEHOLDER },
-    summer: { hotDaysTolerated: HEAT.medium, ...PLACEHOLDER },
-    heatNote: 'Very hot days during fruit development can reduce fruit size and quality.',
-  },
-  {
-    id: 'peach-low', crop: 'Peach / nectarine', type: 'Low-chill varieties', category: 'stone fruit',
-    winter: { chillHours: [200, 400], ...PLACEHOLDER },
-    spring: { floweringMonths: [7, 8], frostDamageC: -2, ...PLACEHOLDER },
-    summer: { hotDaysTolerated: HEAT.medium, ...PLACEHOLDER },
-    heatNote: 'Low-chill types can flower early, which raises spring frost exposure.',
-  },
-  {
-    id: 'apricot', crop: 'Apricot', type: 'Standard varieties', category: 'stone fruit',
-    winter: { chillHours: [500, 900], ...PLACEHOLDER },
-    spring: { floweringMonths: [8], frostDamageC: -2, ...PLACEHOLDER },
-    summer: { hotDaysTolerated: HEAT.medium, ...PLACEHOLDER },
-    heatNote: 'Flowers early, so spring frost is often a bigger risk than summer heat.',
-  },
-  {
-    id: 'plum-japanese', crop: 'Plum', type: 'Japanese types', category: 'stone fruit',
-    winter: { chillHours: [400, 800], ...PLACEHOLDER },
-    spring: { floweringMonths: [8, 9], frostDamageC: -2, ...PLACEHOLDER },
-    summer: { hotDaysTolerated: HEAT.low, ...PLACEHOLDER },
-    heatNote: 'Generally more heat tolerant than European plums.',
-  },
-  {
-    id: 'plum-european', crop: 'Plum', type: 'European / prune types', category: 'stone fruit',
-    winter: { chillHours: [800, 1100], ...PLACEHOLDER },
-    spring: { floweringMonths: [9], frostDamageC: -2, ...PLACEHOLDER },
-    summer: { hotDaysTolerated: HEAT.medium, ...PLACEHOLDER },
-    heatNote: 'Higher chill need makes these the first to struggle as winters warm.',
-  },
-  {
-    id: 'cherry-standard', crop: 'Sweet cherry', type: 'Standard varieties', category: 'cherry',
-    winter: { chillHours: [800, 1200], ...PLACEHOLDER },
-    spring: { floweringMonths: [9, 10], frostDamageC: -2, ...PLACEHOLDER },
-    summer: { hotDaysTolerated: HEAT.high, ...PLACEHOLDER },
-    heatNote: 'Hot weather around flowering and fruit set is a key risk, and hot summers can cause doubled fruit the next season.',
-  },
-  {
-    id: 'cherry-low', crop: 'Sweet cherry', type: 'Low-chill varieties', category: 'cherry',
-    winter: { chillHours: [300, 500], ...PLACEHOLDER },
-    spring: { floweringMonths: [8, 9], frostDamageC: -2, ...PLACEHOLDER },
-    summer: { hotDaysTolerated: HEAT.high, ...PLACEHOLDER },
-    heatNote: 'Newer low-chill lines; check local trial results before committing.',
-  },
-  {
-    id: 'apple-mainstream', crop: 'Apple', type: 'Mainstream varieties', category: 'pome fruit',
-    winter: { chillHours: [600, 1000], ...PLACEHOLDER },
-    spring: { floweringMonths: [9, 10], frostDamageC: -2, ...PLACEHOLDER },
-    summer: { hotDaysTolerated: HEAT.high, ...PLACEHOLDER },
-    heatNote: 'Fruit sunburn risk rises with more days at or above 35 °C; netting is common.',
-  },
-  {
-    id: 'apple-low', crop: 'Apple', type: 'Low-chill varieties', category: 'pome fruit',
-    winter: { chillHours: [200, 400], ...PLACEHOLDER },
-    spring: { floweringMonths: [8, 9], frostDamageC: -2, ...PLACEHOLDER },
-    summer: { hotDaysTolerated: HEAT.high, ...PLACEHOLDER },
-    heatNote: 'Same sunburn exposure as other apples; market demand may differ.',
-  },
-  {
-    id: 'pear', crop: 'European pear', type: 'Standard varieties', category: 'pome fruit',
-    winter: { chillHours: [700, 1100], ...PLACEHOLDER },
-    spring: { floweringMonths: [9], frostDamageC: -2, ...PLACEHOLDER },
-    summer: { hotDaysTolerated: HEAT.medium, ...PLACEHOLDER },
-    heatNote: 'Heat stress and sunburn risk in hot summers.',
-  },
-];
+/** Per-season credibility wrapper. `source` is optional in the JSON and defaults to ''. */
+const sourced = z.object({
+  indicative: z.boolean(),
+  source: z.string().default(''),
+});
+
+const cropSchema = z.object({
+  id: z.string().regex(/^[a-z0-9-]+$/, 'id must be lowercase alphanumeric/hyphen').max(60),
+  crop: z.string().min(1),
+  type: z.string().min(1),
+  category: z.enum(['stone fruit', 'pome fruit', 'cherry']),
+  heatNote: z.string().min(1).max(300),
+  winter: sourced.extend({
+    chillHours: z
+      .tuple([z.number().int().nonnegative(), z.number().int().nonnegative()])
+      .refine(([lo, hi]) => lo <= hi, 'chillHours must be [min, max] with min <= max'),
+  }),
+  spring: sourced
+    .extend({
+      floweringMonths: z.array(z.number().int().min(1).max(12)).min(1),
+      frostDamageC: z.number(),
+    })
+    .nullable(),
+  summer: sourced
+    .extend({
+      // A positive int, or a band keyword expanded to the legacy HEAT numbers.
+      hotDaysTolerated: z.union([
+        z.number().int().positive(),
+        z.enum(['high', 'medium', 'low']).transform((k) => HEAT[k]),
+      ]),
+    })
+    .nullable(),
+});
+
+const cropsSchema = z
+  .array(cropSchema)
+  .min(1)
+  .refine((cs) => new Set(cs.map((c) => c.id)).size === cs.length, 'crop ids must be unique');
+
+/**
+ * Validate once at module load. A `ZodError` here fails the build, tests, server startup and tsx
+ * scripts rather than silently serving a partial catalogue. The validated output is structurally
+ * identical to `CropOption`, so the cast is a formality; we keep the hand-written interfaces as the
+ * public types so no downstream type identity changes. `Object.freeze` guards the read-only singleton.
+ */
+export const CROP_OPTIONS: CropOption[] = Object.freeze(cropsSchema.parse(rawCrops)) as CropOption[];
 
 export function cropLabel(c: CropOption): string {
   return `${c.crop}, ${c.type.toLowerCase()}`;
