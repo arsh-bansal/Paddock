@@ -1,8 +1,11 @@
-import type { SeasonStat, Summary } from './chill';
+import type { Summary } from './chill';
+import type { CropEvaluation, SeasonSummary, YearStat } from './seasons';
 
 export const BASELINE_PERIOD = [1995, 2014] as const;
 export const FUTURE_PERIOD = [2026, 2045] as const;
 export const OBSERVED_PERIOD = [1995, 2025] as const;
+
+export type Verdict = 'viable' | 'at-risk' | 'not-viable';
 
 export interface ModelResult {
   model: string;
@@ -10,45 +13,32 @@ export interface ModelResult {
   winterWarming: number;
   /** Mean warming in summer (Dec–Feb), °C */
   summerWarming: number;
+  /** Annual rainfall change, % (null if the model has no rainfall) */
+  rainChangePct: number | null;
   medianChillHours: number;
   meanHotDays: number;
 }
 
+export interface PeriodClimate {
+  period: readonly [number, number];
+  years: YearStat[];
+  summary: SeasonSummary;
+}
+
 export interface ClimateAnalysis {
+  /** Bumped whenever the shape changes, so saved reports can be migrated or rejected. */
+  schemaVersion: 2;
   location: { lat: number; lon: number; elevation: number | null; label: string };
-  /** Real observed winters/summers, reanalysis (ERA5) */
-  observed: SeasonStat[];
-  baseline: {
-    period: readonly [number, number];
-    chillHoursByYear: number[];
-    chillHours: Summary;
-    chillPortions: Summary;
-    hotDays: Summary;
-  };
-  future: {
-    period: readonly [number, number];
-    /** Pooled synthetic winters across all models (20 per model) */
-    chillHoursPooled: number[];
-    chillHours: Summary;
-    chillPortions: Summary;
-    hotDays: Summary;
-    models: ModelResult[];
-  };
+  /** Real observed years (ERA5 reanalysis) */
+  observed: YearStat[];
+  baseline: PeriodClimate;
+  /** Pooled synthetic years across all models (one set of baseline-length years per model) */
+  future: PeriodClimate & { models: ModelResult[] };
   generatedAt: string;
   servedFrom: 'live' | 'cache';
 }
 
-export interface OptionEvaluation {
-  id: string;
-  label: string;
-  requirement: number;
-  baselinePctMet: number;
-  futurePctMet: number;
-  verdict: Verdict;
-  heatNote: string;
-}
-
-export type Verdict = 'viable' | 'at-risk' | 'not-viable';
+export type { CropEvaluation, SeasonSummary, Summary, YearStat };
 
 export type StressCategory = 'heat' | 'water' | 'pest' | 'disease' | 'nutrient' | 'healthy' | 'unclear';
 
