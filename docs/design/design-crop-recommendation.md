@@ -2,11 +2,11 @@
 
 Owner: Huu
 Status: Draft for review (design only — no code changes)
-Supersedes: the **item-1 UX only** of `docs/design-crop-db-ranking.md`. Items 2 and 3 (JSON crop
+Supersedes: the **item-1 UX only** of `docs/design/design-crop-db-ranking.md`. Items 2 and 3 (JSON crop
 DB + zod loader; expanded crop catalogue) and the `rankCrops()` ordering mechanism are **unchanged
 and already implemented** on `feature/crop-db-ranking`. This document reframes only how the ranked
 output is *presented and selected*.
-Related docs: `docs/design-crop-db-ranking.md` (prior approved design), `docs/crop-data-sources.md`
+Related docs: `docs/design/design-crop-db-ranking.md` (prior approved design), `docs/crop-data-sources.md`
 (data contract).
 
 Project folder: `/Users/duynguyen/side_project/Hackathon/Paddock`. All paths below are relative to

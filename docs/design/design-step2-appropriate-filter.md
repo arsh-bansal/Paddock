@@ -4,7 +4,7 @@ Owner: appropriate-crops-filter slice
 Status: Draft for review (design only — no code changes)
 Project folder: `/Users/duynguyen/side_project/Hackathon/Paddock`. All paths below are relative to it.
 
-Related docs: `docs/design-crop-recommendation.md` (recommendation/ranking UX, Huu), `docs/design-user-added-crops.md`
+Related docs: `docs/design/design-crop-recommendation.md` (recommendation/ranking UX, Huu), `docs/design/design-user-added-crops.md`
 (user-added crops, the combined-list hook), `docs/crop-data-sources.md` (data contract).
 
 This document covers **one** change: moving "appropriate crops" out of the Step‑3 results area and
@@ -104,7 +104,7 @@ a pure chill‑only filter that narrows the Step‑2 picker.**
 
 - **The full Step‑3 analysis + ranking.** `shared/ranking.ts` (`rankCrops`) and the per‑crop verdict card
   `src/components/OptionResults.tsx` are **not edited**. The filter must not call `evaluateCrop`/`rankCrops`.
-- **The recommendation reframe** in `docs/design-crop-recommendation.md` (suited/not‑suited partition,
+- **The recommendation reframe** in `docs/design/design-crop-recommendation.md` (suited/not‑suited partition,
   `classifyClimate`, `CropRecommendation.tsx`). That is Huu's Step‑3 work; this doc only *removes* the
   interim Part‑A list from Step 3 so it doesn't collide.
 - **The seasons / climate engine & server.** `shared/seasons.ts`, `shared/chill.ts`, `server/**`,

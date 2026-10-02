@@ -83,8 +83,9 @@ Other scripts: `npm test`, `npm run lint`, `npm run snapshot` (pre-fetch climate
 
 - Three models and one emissions pathway (HighResMIP future runs follow a high-emissions pathway; verify this) don't span the full range of futures.
 - The grid is roughly 10–25 km, so frost hollows, slopes and aspect on a specific block can differ.
-- **All crop thresholds in `shared/crops.ts` (chill, frost, heat) are indicative placeholders, not sourced figures.** Replace them before demo day.
-- Frost is district-level, and flowering dates don't yet shift earlier with warming.
+- Chill-portion requirements are converted from chill hours for every crop except sweet cherry. See `docs/crop-data-sources.md`.
+- Spring frost comes from a 10–25 km grid that undercounts cold nights: a district estimate, not a block estimate. Flowering dates don't yet shift earlier with warming.
+- Summer heat is reported but not scored: no crop has a sourced heat limit yet.
 - Chill Hours is a crude model in warm climates; Chill Portions are shown as a cross-check.
 - The photo check is triage, not diagnosis.
 

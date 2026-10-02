@@ -316,3 +316,46 @@ having **no citable source** (see the "Values that could NOT be sourced credibly
 `hotDaysTolerated` is marked UNSOURCED for all 10 crops, and the UniMelb Pursuit article is noted as
 confirming heat/sunburn risk is real but publishing no day-count threshold). No sources are invented
 for the summer/water/frost bands; they stand or fall as the app's own defensible judgement.
+
+---
+
+## Scoring model and October 2026 review decisions
+
+**Winter is scored in Chill Portions (Dynamic Model), not Chill Hours.** Reasons:
+
+1. **Like-for-like comparison.** The engine counted gross Weinberger chill hours (every hour 0–7.2 °C,
+   1 April–30 September), but the main hour figures above come from the Chill Hours Tracker's *net*
+   model (warm hours subtract, counting from 1 May). Net requirements are lower than a gross count at
+   the same site, so the app was comparing a large number against a small one, and the Hort Innovation
+   cherry figures are in Chill Portions anyway.
+2. **Australian standard.** Hort Innovation and Darbyshire et al. work in Chill Portions.
+3. **Warming sensitivity.** On real Open-Meteo data for Shepparton, projected chill hours fall ~25%
+   (957 → 714) but chill portions only ~10% (102 → 92). Chill hours are known to overstate the effect
+   of warming, which made the app hide apples and pears at Shepparton, Australia's main pome district.
+
+**How requirements become portions.**
+- Sweet cherry (both classes) are sourced **directly** in portions from Brunt et al. (2017), Tables 1–2:
+  standard (Bing, Summit, Sylvia: High–Very high) = 60–80 CP; low-chill (Lapins ~45–66, Rainier ~45,
+  Stella moderate-high) = 45–60 CP. The standard-cherry chill-hour range shown to growers changed from
+  600–800 h (tracker) to 1000–1500 h (the guide's High band), because the Australian cherry-specific
+  source takes precedence.
+- Every other crop's hour range is **converted** with the same guide's Table 1 cross-model bands
+  (300 h ≈ 20 CP, 500 ≈ 40, 750 ≈ 50, 1000 ≈ 60, 1500 ≈ 80; linear between). Converted values are
+  flagged `portionsDerived` and shown as "converted" / indicative in the app. The table maps rating
+  bands, not exact equivalents, so a direct portions figure should replace each conversion when found.
+
+**Summer heat is reported but not scored.** No published "days ≥35 °C tolerated" figure was found for
+any crop (see the table). The placeholder bands (5/10/15 days) marked every crop "Poor fit" at
+Shepparton, Cobram and Swan Hill even under *today's* climate, where these crops grow commercially.
+`summer` is therefore `null` for every crop: the app still shows each crop's typical hot days then vs
+projected, labelled "not scored yet". The loader still accepts `hotDaysTolerated` (number or
+`high`/`medium`/`low`) for when a real figure is sourced.
+
+**Spring frost is a district estimate.** Real data gives Shepparton under 1 day ≤0 °C a year in
+Aug–Oct, far fewer than orchards there experience, because the 10–25 km grid smooths out radiative
+frost nights. Frost thresholds are filled in from the WSU/USU table (source strings now in the JSON)
+but stay `indicative`, and the app labels frost as a district estimate that undercounts frost hollows.
+
+**Still to source:** direct chill-portion requirements for the non-cherry crops (Fadón et al. 2020
+reports several models; Australian stone-fruit and pome work by Darbyshire et al.), and any credible
+heat-tolerance figure.

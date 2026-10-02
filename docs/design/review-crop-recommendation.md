@@ -1,6 +1,6 @@
 # Code Review — "Crops that suit this block" (feature/crop-db-ranking)
 
-Reviewed against `docs/design-crop-recommendation.md` (§4.2 band table, §3.2 cut line) and the three locked decisions.
+Reviewed against `docs/design/design-crop-recommendation.md` (§4.2 band table, §3.2 cut line) and the three locked decisions.
 Review-only; nothing modified.
 
 ## Verdict: APPROVE
