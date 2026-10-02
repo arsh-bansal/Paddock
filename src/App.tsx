@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { CropCatalogue } from "./components/CropCatalogue";
 import { Planner } from "./components/Planner";
 import { StressCheck } from "./components/StressCheck";
 
-type View = "planner" | "stress";
+type View = "planner" | "stress" | "crops";
 
 export default function App() {
   const [view, setView] = useState<View>("planner");
@@ -40,6 +41,7 @@ export default function App() {
         >
           {tab("planner", "Replant planner")}
           {tab("stress", "Check a tree")}
+          {tab("crops", "Crop data")}
         </nav>
       </header>
 
@@ -69,6 +71,15 @@ export default function App() {
           className="pt-10"
         >
           <StressCheck aiEnabled={aiEnabled} />
+        </div>
+        <div
+          id="panel-crops"
+          role="tabpanel"
+          aria-labelledby="tab-crops"
+          hidden={view !== "crops"}
+          className="pt-10"
+        >
+          <CropCatalogue />
         </div>
       </main>
 
