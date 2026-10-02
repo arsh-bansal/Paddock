@@ -1,7 +1,7 @@
 import { createStore, del, entries, get, set, type UseStore } from "idb-keyval";
 import type { BriefState } from "../components/Brief";
 import type { PickedLocation } from "../components/LocationPicker";
-import type { OptionState } from "../components/OptionPicker";
+import type { OptionState } from "./optionState";
 import type { ClimateAnalysis } from "../../shared/types";
 
 /**

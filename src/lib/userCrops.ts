@@ -22,7 +22,7 @@ import { withPortions, type CropOption } from '../../shared/crops';
 
 /** Longest crop name we persist; matches the loader's string sanity caps. */
 const NAME_MAX = 60;
-/** Chill-hours cap; mirrors `OptionPicker`'s existing requirement input range (0..2000). */
+/** Chill-hours cap; mirrors the variety chill-hours input range (0..2000). */
 const CHILL_MAX = 2000;
 
 /** Default category for user crops. `category` only affects display grouping, never verdicts; the

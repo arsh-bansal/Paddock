@@ -82,6 +82,7 @@ const explainSchema = z.object({
       v !== null &&
       (v as { schemaVersion?: number }).schemaVersion === 2,
   ),
+  grownHere: z.array(z.string().max(120)).max(25).default([]),
   crops: z
     .array(
       z.object({
@@ -119,7 +120,7 @@ app.post("/api/explain", aiLimiter, async (req, res) => {
       .json({ error: "Run the analysis and pick at least one option first." });
     return;
   }
-  const text = await explainResult(body.data.analysis, body.data.crops);
+  const text = await explainResult(body.data.analysis, body.data.crops, body.data.grownHere);
   res.json({ text });
 });
 

@@ -13,6 +13,7 @@ import {
 import type { CropEvaluation, SeasonVerdict } from "../../shared/seasons";
 import type { ClimateAnalysis } from "../../shared/types";
 import { adaptationNotes } from "../lib/adaptation";
+import { groupForRegion, type RegionCrops } from "../../shared/regionCrops";
 import {
   changeTone,
   describeSeason,
@@ -31,8 +32,13 @@ import {
 
 export interface ReportInput {
   analysis: ClimateAnalysis;
+  /** All evaluated crops, in rankCrops order */
   crops: CropEvaluation[];
   brief: string | null;
+  /** The district's crop list, or null when the block isn't near a district we have data for */
+  region: RegionCrops | null;
+  /** Short place name for headings, e.g. "Shepparton" */
+  placeName: string;
 }
 
 const C = {
@@ -271,7 +277,41 @@ function ChillChart({
   );
 }
 
-export function ReportDocument({ analysis, crops, brief }: ReportInput) {
+/** One crop's result card (overall verdict + the three seasons). */
+function CropCardPdf({ c }: { c: CropEvaluation }) {
+  return (
+    <View style={s.card} wrap={false}>
+            <View style={s.cardHead}>
+              <Text
+                style={s.bold}
+              >{`${c.label}: ${requirementText(c)}`}</Text>
+              <Text
+                style={[
+                  s.chip,
+                  {
+                    color: VERDICT[c.overall].fg,
+                    backgroundColor: VERDICT[c.overall].bg,
+                  },
+                ]}
+              >
+                {VERDICT[c.overall].label}
+              </Text>
+            </View>
+            {c.seasons.map((t) => (
+              <View key={t.season} style={s.seasonRow}>
+                <Text style={s.seasonName}>{SEASON_LABEL[t.season]}</Text>
+                <Text style={s.seasonText}>{describeSeason(t)}</Text>
+                <Text
+                  style={[s.seasonVerdict, { color: VERDICT[t.verdict].fg }]}
+                >{`${VERDICT[t.verdict].label}${t.indicative ? "*" : ""}`}</Text>
+              </View>
+            ))}
+            <Text style={s.small}>{`Heat risk: ${c.heatNote}`}</Text>
+          </View>
+  );
+}
+
+export function ReportDocument({ analysis, crops, brief, region, placeName }: ReportInput) {
   const rows = seasonRows(analysis);
   // `crops` arrive already ranked by rankCrops (shared/ranking.ts); keep that order.
   const sorted = crops;
@@ -285,7 +325,8 @@ export function ReportDocument({ analysis, crops, brief }: ReportInput) {
     month: "long",
     year: "numeric",
   });
-  const best = sorted.find((c) => c.overall === "viable");
+  const groups = groupForRegion(sorted, region);
+  const best = (region ? groups.grownToday : sorted).find((c) => c.overall === "viable");
   const anyIndicative = crops.some((c) => c.seasons.some((t) => t.indicative));
 
   return (
@@ -319,7 +360,9 @@ export function ReportDocument({ analysis, crops, brief }: ReportInput) {
         <Text style={s.lead}>
           {`A typical winter here gave about ${int(b)} chill portions (the Dynamic Model measure Australian fruit research uses) in ${period(analysis.baseline.period)}. For ${period(analysis.future.period)}, the years a tree planted now spends cropping, it is projected at about ${int(f)}${change < 0 ? `, ${Math.abs(change)}% less` : change > 0 ? `, ${change}% more` : ""}.`}
           {best
-            ? ` Best climate fit of the crops checked: ${best.label}.`
+            ? region
+              ? ` Best fit of the crops grown here today: ${best.label}.`
+              : ` Best climate fit of the crops checked: ${best.label}.`
             : " None of the options checked is a good climate fit in every season."}
         </Text>
 
@@ -359,42 +402,49 @@ export function ReportDocument({ analysis, crops, brief }: ReportInput) {
           </Text>
         </View>
 
-        <Text style={s.h2} break={sorted.length > 2}>
-          How each crop holds up
-        </Text>
-        <Text style={[s.muted, { marginBottom: 6 }]}>
-          Each crop is judged on the season that troubles it most.
-        </Text>
-        {sorted.map((c) => (
-          <View key={c.id} style={s.card} wrap={false}>
-            <View style={s.cardHead}>
-              <Text
-                style={s.bold}
-              >{`${c.label}: ${requirementText(c)}`}</Text>
-              <Text
-                style={[
-                  s.chip,
-                  {
-                    color: VERDICT[c.overall].fg,
-                    backgroundColor: VERDICT[c.overall].bg,
-                  },
-                ]}
-              >
-                {VERDICT[c.overall].label}
+        {region ? (
+          <>
+            <Text style={s.h2} break>{`Grown around ${placeName} today`}</Text>
+            <Text style={[s.muted, { marginBottom: 6 }]}>
+              {`How the crops this district grows now hold up through ${period(analysis.future.period)}. Each crop is judged on the season that troubles it most.${region.indicative ? " Preliminary list of local crops, to be replaced with ABS farm census figures." : ""}`}
+            </Text>
+            {groups.grownToday.length > 0 ? (
+              groups.grownToday.map((c) => <CropCardPdf key={c.id} c={c} />)
+            ) : (
+              <Text style={s.muted}>None of the main local crops are in our climate database yet.</Text>
+            )}
+            {groups.grownNoData.length > 0 && (
+              <Text style={[s.small, { marginBottom: 4 }]}>
+                {`Also grown here, not yet scored (no climate thresholds yet): ${groups.grownNoData.join(", ")}.`}
               </Text>
+            )}
+            <View wrap={false}>
+              <Text style={s.h2}>Could also suit this area</Text>
+              <Text style={[s.muted, { marginBottom: 6 }]}>Crops not commonly grown here whose climate fit still works, best fit first.</Text>
+              {groups.couldSuit[0] ? <CropCardPdf c={groups.couldSuit[0]} /> : <Text style={s.muted}>No other crop in our database is a good or risky fit here.</Text>}
             </View>
-            {c.seasons.map((t) => (
-              <View key={t.season} style={s.seasonRow}>
-                <Text style={s.seasonName}>{SEASON_LABEL[t.season]}</Text>
-                <Text style={s.seasonText}>{describeSeason(t)}</Text>
-                <Text
-                  style={[s.seasonVerdict, { color: VERDICT[t.verdict].fg }]}
-                >{`${VERDICT[t.verdict].label}${t.indicative ? "*" : ""}`}</Text>
+            {groups.couldSuit.slice(1).map((c) => <CropCardPdf key={c.id} c={c} />)}
+            {groups.struggles.length > 0 && (
+              <View wrap={false}>
+                <Text style={s.h2}>Struggles here</Text>
+                {groups.struggles.map((c) => (
+                  <View key={c.id} style={s.seasonRow}>
+                    <Text style={[s.seasonText, s.bold]}>{c.label}</Text>
+                    <Text style={[s.seasonVerdict, { width: 90, color: VERDICT[c.overall].fg }]}>{VERDICT[c.overall].label}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-            <Text style={s.small}>{`Heat risk: ${c.heatNote}`}</Text>
-          </View>
-        ))}
+            )}
+          </>
+        ) : (
+          <>
+            <Text style={s.h2} break>{`How each crop fares at ${placeName}`}</Text>
+            <Text style={[s.muted, { marginBottom: 6 }]}>
+              Best fit first. Each crop is judged on the season that troubles it most.
+            </Text>
+            {sorted.map((c) => <CropCardPdf key={c.id} c={c} />)}
+          </>
+        )}
         {anyIndicative && (
           <Text style={s.small}>
             * Indicative: the threshold was converted between chill measures or

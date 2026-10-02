@@ -26,11 +26,11 @@ export function fetchClimate(lat: number, lon: number, label: string) {
   return request<ClimateAnalysis>(`/api/climate?${q}`);
 }
 
-export function fetchBrief(analysis: ClimateAnalysis, crops: CropEvaluation[]) {
+export function fetchBrief(analysis: ClimateAnalysis, crops: CropEvaluation[], grownHere: string[] = []) {
   return request<{ text: string }>("/api/explain", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ analysis, crops }),
+    body: JSON.stringify({ analysis, crops, grownHere }),
   });
 }
 

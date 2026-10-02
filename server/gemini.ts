@@ -18,7 +18,11 @@ const round = (n: number) => (Number.isFinite(n) ? Math.round(n) : null);
 const one = (n: number) => (Number.isFinite(n) ? Math.round(n * 10) / 10 : null);
 
 /** Plain-English brief for the grower. The model only rewords numbers we computed. */
-export async function explainResult(analysis: ClimateAnalysis, crops: CropEvaluation[]): Promise<string> {
+export async function explainResult(
+  analysis: ClimateAnalysis,
+  crops: CropEvaluation[],
+  grownHere: string[] = [],
+): Promise<string> {
   const b = analysis.baseline.summary;
   const f = analysis.future.summary;
   const then = `${analysis.baseline.period[0]}-${analysis.baseline.period[1]}`;
@@ -45,6 +49,7 @@ export async function explainResult(analysis: ClimateAnalysis, crops: CropEvalua
       annualShortfallRainVsEvaporationMm: { then: round(b.waterDeficitMm.mean), projected: round(f.waterDeficitMm.mean) },
     },
     climateModelsUsed: analysis.future.models.length,
+    cropsGrownInThisDistrictToday: grownHere,
     crops: crops.map((c) => ({
       crop: c.label,
       overall: c.overall,
@@ -74,7 +79,7 @@ export async function explainResult(analysis: ClimateAnalysis, crops: CropEvalua
         'Two short paragraphs, under 160 words total.',
         'Only use numbers that appear in the facts. Never invent figures, varieties, prices or sources. Skip any value that is null.',
         'Paragraph 1: how the seasons are changing at this location: winter chill, spring frost, summer heat and water, in that order. Only mention the changes that matter most.',
-        'Paragraph 2: what that means for the crops, starting with the safest one, and name the season that holds back each risky crop.',
+        'Paragraph 2: what that means for the crops. If cropsGrownInThisDistrictToday is not empty, start with how those crops fare, then mention the best other option. Name the season that holds back any risky crop.',
         'End with one sentence saying these are model projections and the cultivar choice should be checked with their nursery or an Agriculture Victoria adviser.',
       ].join('\n'),
     },

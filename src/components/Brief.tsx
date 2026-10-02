@@ -17,12 +17,14 @@ export function briefSignature(analysis: ClimateAnalysis, crops: CropEvaluation[
 interface Props {
   analysis: ClimateAnalysis;
   crops: CropEvaluation[];
+  /** Labels of the crops the district grows today, so the summary can lead with them */
+  grownHere?: string[];
   aiEnabled: boolean;
   brief: BriefState | null;
   onBrief: (b: BriefState) => void;
 }
 
-export function Brief({ analysis, crops, aiEnabled, brief, onBrief }: Props) {
+export function Brief({ analysis, crops, grownHere = [], aiEnabled, brief, onBrief }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const signature = briefSignature(analysis, crops);
@@ -32,7 +34,7 @@ export function Brief({ analysis, crops, aiEnabled, brief, onBrief }: Props) {
     setLoading(true);
     setError(null);
     try {
-      onBrief({ text: (await fetchBrief(analysis, crops)).text, signature });
+      onBrief({ text: (await fetchBrief(analysis, crops, grownHere)).text, signature });
     } catch (e) {
       setError((e as Error).message);
     } finally {

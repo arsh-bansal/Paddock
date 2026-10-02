@@ -1,0 +1,75 @@
+{
+  "_readme": "Crops grown in each preset district today. PLACEHOLDER: compiled from general knowledge of each district, NOT from ABS data. Replace each list with the ABS Agricultural Census commodity data for the matching region, then set indicative to false and fill in source. cropId links to shared/crops.data.json; use null for a crop we have no climate data for yet (it is shown as 'grown here, no climate data yet').",
+  "regions": [
+    {
+      "presetId": "shepparton",
+      "name": "the Goulburn Valley around Shepparton",
+      "indicative": true,
+      "source": "",
+      "grownToday": [
+        { "cropId": "pear", "name": "Pears" },
+        { "cropId": "apple-mainstream", "name": "Apples" },
+        { "cropId": "peach-standard", "name": "Peaches and nectarines" },
+        { "cropId": "apricot", "name": "Apricots" },
+        { "cropId": "plum-japanese", "name": "Plums" }
+      ]
+    },
+    {
+      "presetId": "cobram",
+      "name": "the Goulburn Valley around Cobram",
+      "indicative": true,
+      "source": "",
+      "grownToday": [
+        { "cropId": "peach-standard", "name": "Peaches and nectarines" },
+        { "cropId": "apricot", "name": "Apricots" },
+        { "cropId": "plum-japanese", "name": "Plums" }
+      ]
+    },
+    {
+      "presetId": "harcourt",
+      "name": "the Harcourt district",
+      "indicative": true,
+      "source": "",
+      "grownToday": [
+        { "cropId": "apple-mainstream", "name": "Apples" },
+        { "cropId": "pear", "name": "Pears" },
+        { "cropId": "cherry-standard", "name": "Cherries" },
+        { "cropId": null, "name": "Wine grapes" }
+      ]
+    },
+    {
+      "presetId": "wandin",
+      "name": "the Yarra Valley around Wandin",
+      "indicative": true,
+      "source": "",
+      "grownToday": [
+        { "cropId": "cherry-standard", "name": "Cherries" },
+        { "cropId": "apple-mainstream", "name": "Apples" },
+        { "cropId": null, "name": "Berries" },
+        { "cropId": null, "name": "Wine grapes" }
+      ]
+    },
+    {
+      "presetId": "bacchus-marsh",
+      "name": "the Bacchus Marsh district",
+      "indicative": true,
+      "source": "",
+      "grownToday": [
+        { "cropId": "apple-mainstream", "name": "Apples" },
+        { "cropId": "pear", "name": "Pears" }
+      ]
+    },
+    {
+      "presetId": "swan-hill",
+      "name": "the Swan Hill district",
+      "indicative": true,
+      "source": "",
+      "grownToday": [
+        { "cropId": "peach-standard", "name": "Peaches and nectarines" },
+        { "cropId": null, "name": "Almonds" },
+        { "cropId": null, "name": "Table grapes" },
+        { "cropId": null, "name": "Olives" }
+      ]
+    }
+  ]
+}
