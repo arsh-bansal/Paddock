@@ -74,6 +74,83 @@ app.get("/api/climate", climateLimiter, async (req, res) => {
   res.json(analysis);
 });
 
+/** Open-Meteo admin1 names for Australian states/territories. */
+const AU_STATES = [
+  "Victoria",
+  "New South Wales",
+  "Queensland",
+  "South Australia",
+  "Western Australia",
+  "Tasmania",
+  "Australian Capital Territory",
+  "Northern Territory",
+] as const;
+
+const geocodeSchema = z.object({
+  q: z.string().trim().min(2).max(80),
+  state: z.enum(AU_STATES).optional(),
+});
+
+type GeocodeHit = {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  country_code?: string;
+  admin1?: string;
+  admin2?: string;
+};
+
+/** Address search via Open-Meteo Geocoding (Australia only; optional state filter). */
+app.get("/api/geocode", climateLimiter, async (req, res) => {
+  const q = geocodeSchema.safeParse(req.query);
+  if (!q.success) {
+    res.status(400).json({ error: "Type at least two characters." });
+    return;
+  }
+  // Open-Meteo matches "name, admin1" exactly on the qualifier after the comma.
+  const name = q.data.state ? `${q.data.q}, ${q.data.state}` : q.data.q;
+  const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
+  url.searchParams.set("name", name);
+  url.searchParams.set("count", "10");
+  url.searchParams.set("language", "en");
+  url.searchParams.set("countryCode", "AU");
+
+  let raw: { results?: GeocodeHit[] };
+  try {
+    const upstream = await fetch(url);
+    if (!upstream.ok) throw new Error(`geocode ${upstream.status}`);
+    raw = (await upstream.json()) as { results?: GeocodeHit[] };
+  } catch {
+    res.status(502).json({ error: "Place search is unavailable right now. Try again in a minute." });
+    return;
+  }
+
+  const inBounds = (lat: number, lon: number) =>
+    lat >= AU_BOUNDS.latMin &&
+    lat <= AU_BOUNDS.latMax &&
+    lon >= AU_BOUNDS.lonMin &&
+    lon <= AU_BOUNDS.lonMax;
+
+  const results = (raw.results ?? [])
+    .filter((r) => inBounds(r.latitude, r.longitude))
+    .filter((r) => !q.data.state || r.admin1 === q.data.state)
+    .map((r) => {
+      const parts = [r.name, r.admin2, r.admin1].filter(Boolean);
+      return {
+        id: r.id,
+        name: r.name,
+        label: parts.join(", "),
+        lat: r.latitude,
+        lon: r.longitude,
+        admin1: r.admin1 ?? null,
+      };
+    });
+
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.json({ results });
+});
+
 const verdictEnum = z.enum(["viable", "at-risk", "not-viable", "no-data"]);
 const explainSchema = z.object({
   analysis: z.custom<ClimateAnalysis>(
