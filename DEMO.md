@@ -7,7 +7,7 @@
 - [x] "Grown here today" lists come from the ABS Agricultural Census 2020–21 (`npm run import:abs`).
 - [ ] **Decide on Bacchus Marsh:** ABS records almost no commercial fruit there. Swap it for an active district or leave it to show the app handling that honestly.
 - [x] Almonds, pistachios, walnuts, blueberries and grapes added with sourced thresholds (olives stay unscored; see `docs/crop-data-sources.md`).
-- [ ] **Know the headline finding before you pitch it:** on winter chill and spring frost, every crop still fits all six Victorian districts through 2045. The districts differ on heat and water, which aren't scored per crop yet. Say that plainly; it's a real result.
+- [ ] **Know the headline finding before you pitch it:** on winter chill and spring frost, every crop still fits all six Victorian districts through 2045. The real difference is water: the Yarra Valley's yearly evaporation-minus-rain gap nearly quadruples (32 → 117 mm), about 40% on top of today's orchard irrigation, while Swan Hill's rises ~4% on an already heavy 8.2 ML/ha (`docs/water.md`). Say both plainly; they're real results.
 - [ ] **Replace converted chill-portion figures** with direct ones where a source exists (`docs/crop-data-sources.md`).
 - [ ] **Get one real grower or adviser quote.** Message a Goulburn Valley grower, Fruit Growers Victoria, or an Agriculture Victoria horticulture officer. One line like "we're replanting next year and have no idea what chill to plan for" beats any slide.
 - [ ] **Confirm Climathon's rules on prior work.** This is a rebuild of a June prototype; be upfront about what's new.

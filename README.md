@@ -17,11 +17,11 @@ Stone fruit, cherries, apples and pears need a certain amount of winter cold ("c
    - **Struggles here:** the rest, with the reason.
 
    Each crop is judged season by season (winter chill, spring frost, summer heat), and a grower can adjust any crop for their exact variety.
-3. **Understand the climate.** Season-by-season table, 50 years of winter chill, a plain-English summary (Gemini, from computed numbers only), and ways to reduce the risk.
+3. **Understand the climate.** Water (irrigation today from ABS, and how the climate's water shortfall changes), season-by-season table, 50 years of winter chill, a plain-English summary (Gemini, from computed numbers only), and ways to reduce the risk.
 4. **Keep it.** Download a PDF report or save it on the device (opens offline).
 5. **Check a tree.** Photo triage for heat, water stress, pests and disease using Gemini vision.
 
-Details: `docs/regional-crops.md`, `docs/seasons-and-reports.md`, `docs/crop-data-sources.md`.
+Details: `docs/regional-crops.md`, `docs/water.md`, `docs/seasons-and-reports.md`, `docs/crop-data-sources.md`.
 
 ## How it works
 
@@ -75,7 +75,7 @@ npm run build
 npm start                   # serves app + API on :8787
 ```
 
-Other scripts: `npm test`, `npm run lint`, `npm run import:abs -- <AGCDCASGS202021.xlsx>` (rebuild district crop lists from ABS data), `npm run snapshot` (pre-fetch climate data for all preset districts into `data/cache/` so the demo works offline).
+Other scripts: `npm test`, `npm run lint`, `npm run import:abs -- <AGCDCASGS202021.xlsx>` (rebuild district crop lists from ABS data), `npm run import:abs-water -- <WUAFDCLGA202021.xlsx>` (rebuild irrigation figures), `npm run snapshot` (pre-fetch climate data for all preset districts into `data/cache/` so the demo works offline).
 
 ## Limitations (say these out loud, judges respect it)
 
