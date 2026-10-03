@@ -4,7 +4,11 @@
 
 - [ ] **Run `npm run snapshot` on good wifi** and commit `data/cache/`. The demo then works with no internet.
 - [ ] **Sanity-check the Shepparton numbers.** Typical winter chill should look plausible against published Goulburn Valley figures. If it's wildly off, tell the team before the judges do.
-- [ ] **Replace the indicative chill ranges** in `shared/crops.ts` with sourced figures and fill in `source`. This is the first thing an ag judge will poke at.
+- [x] "Grown here today" lists come from the ABS Agricultural Census 2020–21 (`npm run import:abs`).
+- [ ] **Decide on Bacchus Marsh:** ABS records almost no commercial fruit there. Swap it for an active district or leave it to show the app handling that honestly.
+- [x] Almonds, pistachios, walnuts, blueberries and grapes added with sourced thresholds (olives stay unscored; see `docs/crop-data-sources.md`).
+- [ ] **Know the headline finding before you pitch it:** on winter chill and spring frost, every crop still fits all six Victorian districts through 2045. The real difference is water: the Yarra Valley's yearly evaporation-minus-rain gap nearly quadruples (32 → 117 mm), about 40% on top of today's orchard irrigation, while Swan Hill's rises ~4% on an already heavy 8.2 ML/ha (`docs/water.md`). Say both plainly; they're real results.
+- [ ] **Replace converted chill-portion figures** with direct ones where a source exists (`docs/crop-data-sources.md`).
 - [ ] **Get one real grower or adviser quote.** Message a Goulburn Valley grower, Fruit Growers Victoria, or an Agriculture Victoria horticulture officer. One line like "we're replanting next year and have no idea what chill to plan for" beats any slide.
 - [ ] **Confirm Climathon's rules on prior work.** This is a rebuild of a June prototype; be upfront about what's new.
 - [ ] Set `GEMINI_API_KEY` on the demo machine and test both AI features once.
@@ -14,6 +18,6 @@
 
 1. **Hook (20 s).** "A peach tree planted this winter is still cropping in 2045. What will winter look like then?"
 2. **Problem (30 s).** Fruit trees need winter chill. Winters are warming. Growers replant blocks on 20-year bets using last decade's climate. Wrong call = years of patchy crops.
-3. **Live demo (90 s).** Shepparton → tick standard peach, low-chill peach, cherry, apple → Check my block. Point at the chart: dots are real winters, band is 2026–2045. Read out one verdict. Hit "Write a summary". If time, show a photo check.
+3. **Live demo (90 s).** Pick Shepparton: results appear straight away. Walk through "Grown around Shepparton today" (pears, apples, stone fruit and how each holds up to 2045), then "Could also suit this area". Open one crop's "Adjust for my variety" and enter a nursery figure. Show the chart (dots are real winters, band is 2026–2045) and "Write a summary". If time, switch to Swan Hill to show a different district, or do a photo check.
 4. **Why it's credible (20 s).** Real reanalysis + 3 climate models, delta-change method, safe-winter-chill threshold from the research literature. Say the limitations.
 5. **2035 impact (20 s).** Avoids stranded orchards, keeps Victorian fruit supply stable, and turns climate projections into a decision a farmer can make. Next steps: sourced cultivar data with Ag Vic, frost risk, other states.

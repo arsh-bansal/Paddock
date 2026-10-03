@@ -88,7 +88,7 @@ export function AddCropForm({ userCrops, status, loadError, onAdd, onEdit, onDel
     setEditingId(c.id);
     setName(c.crop);
     // Stored as a tight range [v, v]; show the single value the grower typed.
-    setChill(String(c.winter.chillHours[0]));
+    setChill(String(c.winter?.chillHours[0] ?? ""));
     setError(null);
     nameRef.current?.focus();
   };
@@ -110,8 +110,9 @@ export function AddCropForm({ userCrops, status, loadError, onAdd, onEdit, onDel
           {heading}
         </h3>
         <p className="max-w-[62ch] text-sm text-muted">
-          Got a variety we don’t list? Add it with your own winter chill figure and we’ll rank it
-          alongside the rest. Your crops stay on this device.
+          Got a fruit tree variety we don’t list? Add it with its winter chill hours (from your nursery)
+          and we’ll rank it alongside the rest. It’s judged on winter chill only, because we don’t know its
+          frost or heat limits. Your crops stay on this device.
         </p>
       </div>
 
@@ -134,7 +135,7 @@ export function AddCropForm({ userCrops, status, loadError, onAdd, onEdit, onDel
             maxLength={60}
             disabled={storageBlocked || busy}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Mango, Keitt"
+            placeholder="e.g. Fuji apple"
             className="rounded-md border border-line px-3 py-2 disabled:bg-paper disabled:text-muted"
           />
         </div>
@@ -196,7 +197,7 @@ export function AddCropForm({ userCrops, status, loadError, onAdd, onEdit, onDel
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-bold">{c.crop}</span>
                   <YourFiguresBadge />
-                  <span className="text-sm text-muted">{c.winter.chillHours[0]} chill hours</span>
+                  <span className="text-sm text-muted">{c.winter?.chillHours[0] ?? 0} chill hours</span>
                 </span>
                 <span className="flex items-center gap-2">
                   <button

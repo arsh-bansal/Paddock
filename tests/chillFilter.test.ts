@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { filterAppropriateByChill, isAppropriateByChill } from '../shared/chillFilter';
-import type { CropOption } from '../shared/crops';
+import { filterAppropriateByChill, isAppropriateByChill, partitionByChill } from '../shared/chillFilter';
+import { CROP_OPTIONS, type CropOption } from '../shared/crops';
 
 /*
- * Unit tests for the Step-2 chill-only pre-filter. The filter only reads `id` and
- * `winter.chillHours` (it keeps a crop iff the block's future median chill reaches the UN-ROUNDED
- * MIDPOINT of the crop's [min, max] range), so fixtures are minimal valid `CropOption` literals with
+ * Unit tests for the Step-2 chill-only split. The filter only reads `id` and
+ * `winter.chillPortions` (it keeps a crop iff the block's future median chill PORTIONS reach the
+ * UN-ROUNDED MIDPOINT of the crop's [min, max] portions range). Fixture numbers are portions, so fixtures are minimal valid `CropOption` literals with
  * trivial values for the fields the filter ignores. These are plain literals (no climate run) and run
  * identically under vitest / tsx / Vite / esbuild.
  */
@@ -17,7 +17,7 @@ function crop(id: string, chill: [number, number]): CropOption {
     crop: id,
     type: 'Standard varieties',
     category: 'stone fruit',
-    winter: { indicative: false, source: '', chillHours: chill },
+    winter: { indicative: false, source: '', chillHours: chill, hoursDerived: false, chillPortions: chill, portionsDerived: false, portionsSource: '' },
     spring: null,
     summer: null,
     heatNote: 'n/a',
@@ -144,43 +144,30 @@ describe('filterAppropriateByChill (midpoint rule)', () => {
  * Integration-style test over the 10 REAL crops' [min, max] pairs (from shared/crops.data.json),
  * pinning the headline warm-vs-cold behaviour the midpoint rule exists to produce.
  */
-describe('filterAppropriateByChill over the real 10-crop catalogue', () => {
-  // [id, [min, max]] — midpoints noted in comments (addendum A2.4).
-  const realCrops: CropOption[] = [
-    crop('peach-standard', [400, 800]), // 600
-    crop('peach-low', [200, 400]), // 300
-    crop('apricot', [300, 600]), // 450
-    crop('plum-japanese', [118, 685]), // 401.5
-    crop('plum-european', [579, 1323]), // 951
-    crop('cherry-standard', [600, 800]), // 700
-    crop('cherry-low', [300, 500]), // 400
-    crop('apple-mainstream', [550, 1000]), // 775
-    crop('apple-low', [200, 400]), // 300
-    crop('pear', [700, 900]), // 800
-  ];
-
-  it('COLD block (future median 1000) keeps all 10 crops, order preserved', () => {
-    const kept = filterAppropriateByChill(realCrops, 1000).map((c) => c.id);
-    expect(kept).toEqual(realCrops.map((c) => c.id));
-    expect(kept).toHaveLength(10);
+describe('over the real catalogue (scored in chill portions)', () => {
+  it('a cold block (future median 100 portions) suits all crops, order preserved', () => {
+    const kept = filterAppropriateByChill(CROP_OPTIONS, 100).map((c) => c.id);
+    expect(kept).toEqual(CROP_OPTIONS.map((c) => c.id));
   });
 
-  it('WARM block (future median 500) keeps exactly the 5 crops whose midpoint <= 500', () => {
-    const kept = filterAppropriateByChill(realCrops, 500).map((c) => c.id);
-    // midpoints <= 500: peach-low(300), apricot(450), plum-japanese(401.5), cherry-low(400),
-    // apple-low(300). In INPUT order:
-    expect(kept).toEqual([
-      'peach-low',
-      'apricot',
-      'plum-japanese',
-      'cherry-low',
-      'apple-low',
+  it('a warm block (future median 45 portions) suits only the low-chill crops, plus crops chill can’t rule out', () => {
+    const kept = filterAppropriateByChill(CROP_OPTIONS, 45).map((c) => c.id);
+    // Low-chill classes (needs at or under 45 portions) and grapes (winter not scored).
+    expect(kept).toEqual(['peach-standard', 'peach-low', 'apricot', 'plum-japanese', 'apple-low', 'almond', 'blueberry-southern', 'grape']);
+  });
+
+  it('partition never drops a crop: suited + struggling is the whole list', () => {
+    const { suited, struggling } = partitionByChill(CROP_OPTIONS, 45);
+    expect(suited.length + struggling.length).toBe(CROP_OPTIONS.length);
+    // Walnut needs 46 portions, just over the 45 available.
+    expect(struggling.map((c) => c.id)).toEqual([
+      'plum-european', 'cherry-standard', 'cherry-low', 'apple-mainstream', 'pear', 'pistachio', 'walnut', 'blueberry-northern',
     ]);
-    // and it drops the other 5 (midpoints 600, 951, 700, 775, 800):
-    expect(kept).not.toContain('peach-standard'); // 600
-    expect(kept).not.toContain('plum-european'); // 951
-    expect(kept).not.toContain('cherry-standard'); // 700
-    expect(kept).not.toContain('apple-mainstream'); // 775
-    expect(kept).not.toContain('pear'); // 800
+  });
+
+  it('partition puts everything in suited when chill is unavailable', () => {
+    const { suited, struggling } = partitionByChill(CROP_OPTIONS, Number.NaN);
+    expect(suited).toHaveLength(CROP_OPTIONS.length);
+    expect(struggling).toHaveLength(0);
   });
 });

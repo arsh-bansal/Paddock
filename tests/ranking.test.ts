@@ -18,7 +18,7 @@ function evalCrop(
   seasons: SeasonResult[],
   label = id,
 ): CropEvaluation {
-  return { id, label, overall, seasons, heatNote: '', chillRequirement: 500 };
+  return { id, label, overall, seasons, heatNote: '', chillRequirement: 500, chillPortionsRequirement: 40, portionsConverted: false };
 }
 
 /** Deterministic shuffle (seeded) so "shuffled input" is reproducible across runs. */

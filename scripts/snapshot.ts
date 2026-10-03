@@ -12,7 +12,8 @@ for (const r of REGION_PRESETS) {
   try {
     const a = await analyseLocation(r.lat, r.lon, label);
     console.log(
-      `✓ ${label.padEnd(32)} chill ${Math.round(a.baseline.summary.chillHours.median)} → ${Math.round(a.future.summary.chillHours.median)} h, ` +
+      `✓ ${label.padEnd(32)} chill ${Math.round(a.baseline.summary.chillPortions.median)} → ${Math.round(a.future.summary.chillPortions.median)} portions ` +
+        `(${Math.round(a.baseline.summary.chillHours.median)} → ${Math.round(a.future.summary.chillHours.median)} h), ` +
         `frost days ${a.baseline.summary.springFrostDays.mean.toFixed(1)} → ${a.future.summary.springFrostDays.mean.toFixed(1)}, ` +
         `hot days ${a.baseline.summary.hotDays.mean.toFixed(1)} → ${a.future.summary.hotDays.mean.toFixed(1)}, ` +
         `rain ${Math.round(a.baseline.summary.annualRainMm.mean)} mm, models ${a.future.models.length}`,

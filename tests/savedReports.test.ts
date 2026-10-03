@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { initialOptionState } from '../src/components/OptionPicker';
+import { initialOptionState } from '../src/lib/optionState';
 import { deleteReport, listReports, loadReport, MAX_SAVED_REPORTS, saveReport } from '../src/lib/savedReports';
 import type { ClimateAnalysis } from '../shared/types';
 

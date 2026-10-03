@@ -22,9 +22,12 @@ import { useCombinedCrops } from "../lib/useCombinedCrops";
 function provenance(c: CropOption): { label: string; detail: string } {
   // User-added crops: the grower's own figure.
   if (isUserCrop(c.id)) {
-    return { label: "Your figures", detail: c.winter.source };
+    return { label: "Your figures", detail: c.winter?.source ?? "" };
   }
   // Built-in, indicative (placeholder) figure → an app assumption; show the source if we have one.
+  if (!c.winter) {
+    return { label: "Chill not scored", detail: "No chill figure that fits our winter-chill model" };
+  }
   if (c.winter.indicative) {
     return { label: "App assumption", detail: c.winter.source };
   }
@@ -59,8 +62,8 @@ export function CropCatalogue() {
       <div className="overflow-x-auto rounded-xl border border-line bg-card">
         <table className="w-full border-collapse text-left text-sm">
           <caption className="sr-only">
-            Full crop catalogue: crop name, type, category, winter chill-hour range and the source of
-            each chill figure.
+            Full crop catalogue: crop name, type, category, winter chill-hour range, the chill-portion
+            range it is scored on, and the source of each chill figure.
           </caption>
           <thead>
             <tr className="border-b border-line">
@@ -75,6 +78,9 @@ export function CropCatalogue() {
               </th>
               <th scope="col" className="px-4 py-3 font-bold">
                 Winter chill (hours)
+              </th>
+              <th scope="col" className="px-4 py-3 font-bold">
+                Scored as (portions)
               </th>
               <th scope="col" className="px-4 py-3 font-bold">
                 Provenance
@@ -92,7 +98,26 @@ export function CropCatalogue() {
                   <td className="px-4 py-3">{c.type}</td>
                   <td className="px-4 py-3 capitalize">{c.category}</td>
                   <td className="px-4 py-3 tabular">
-                    {c.winter.chillHours[0]}–{c.winter.chillHours[1]}
+                    {c.winter ? (
+                      <>
+                        {c.winter.chillHours[0]}–{c.winter.chillHours[1]}
+                        {c.winter.hoursDerived && <span className="block text-xs text-muted">converted from portions</span>}
+                      </>
+                    ) : (
+                      <span className="text-muted">n/a</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 tabular">
+                    {c.winter ? (
+                      <>
+                        {Math.round(c.winter.chillPortions[0])}–{Math.round(c.winter.chillPortions[1])}
+                        <span className="block text-xs text-muted">
+                          {c.winter.portionsDerived ? "converted from hours" : "sourced directly"}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-muted">not scored</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className="font-bold">{prov.label}</span>
@@ -101,7 +126,10 @@ export function CropCatalogue() {
                     )}
                     {!isUserCrop(c.id) && hasIndicativeData(c) && (
                       <span className="block text-xs text-muted">
-                        Spring/summer figures are app assumptions.
+                        {c.spring
+                          ? `Frost: ${c.spring.indicative ? "indicative, district estimate" : "sourced"}. `
+                          : "Frost: no data. "}
+                        {c.summer ? "Heat: indicative limit." : "Heat: shown, not scored (no published limit)."}
                       </span>
                     )}
                   </td>

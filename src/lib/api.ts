@@ -26,11 +26,18 @@ export function fetchClimate(lat: number, lon: number, label: string) {
   return request<ClimateAnalysis>(`/api/climate?${q}`);
 }
 
-export function fetchBrief(analysis: ClimateAnalysis, crops: CropEvaluation[]) {
+export interface WaterFacts {
+  orchardIrrigationMlPerHa: number | null;
+  shortfallChangeMm: number;
+  extraMlPerHa: number;
+  extraShareOfToday: number | null;
+}
+
+export function fetchBrief(analysis: ClimateAnalysis, crops: CropEvaluation[], grownHere: string[] = [], water: WaterFacts | null = null) {
   return request<{ text: string }>("/api/explain", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ analysis, crops }),
+    body: JSON.stringify({ analysis, crops, grownHere, water }),
   });
 }
 

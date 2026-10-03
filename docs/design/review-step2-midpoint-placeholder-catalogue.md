@@ -3,7 +3,7 @@
 - **Project:** `/Users/duynguyen/side_project/Hackathon/Paddock`
 - **Branch:** `feature/crop-db-ranking`
 - **Mode:** Review-only (nothing modified).
-- **Spec:** `docs/design-step2-appropriate-filter.md` §1–§5 + Addendum (A2 midpoint, A3 placeholder, A4 catalogue).
+- **Spec:** `docs/design/design-step2-appropriate-filter.md` §1–§5 + Addendum (A2 midpoint, A3 placeholder, A4 catalogue).
 - **Scope reviewed:** NEW `src/components/CropCatalogue.tsx`; CHANGED `shared/chillFilter.ts`, `tests/chillFilter.test.ts`, `src/components/OptionPicker.tsx`, `src/components/Planner.tsx`, `src/App.tsx`.
 
 ## Build / Test evidence

@@ -23,9 +23,9 @@ describe('userCrops store', () => {
     expect(created.id).toMatch(USER_ID);
     expect(created.crop).toBe('Mango');
     expect(created.type).toBe(USER_CROP_TYPE);
-    expect(created.winter.chillHours).toEqual([100, 100]);
-    expect(created.winter.source).toBe(USER_CROP_SOURCE);
-    expect(created.winter.indicative).toBe(true);
+    expect(created.winter!.chillHours).toEqual([100, 100]);
+    expect(created.winter!.source).toBe(USER_CROP_SOURCE);
+    expect(created.winter!.indicative).toBe(true);
     expect(created.spring).toBeNull();
     expect(created.summer).toBeNull();
 
@@ -41,13 +41,13 @@ describe('userCrops store', () => {
     const updated = await updateUserCrop(created.id, { name: 'Guava, white', chillHours: 75 });
     expect(updated.id).toBe(created.id);
     expect(updated.crop).toBe('Guava, white');
-    expect(updated.winter.chillHours).toEqual([75, 75]);
+    expect(updated.winter!.chillHours).toEqual([75, 75]);
 
     const list = await listUserCrops();
     const match = list.filter((c) => c.id === created.id);
     expect(match).toHaveLength(1);
     expect(match[0].crop).toBe('Guava, white');
-    expect(match[0].winter.chillHours).toEqual([75, 75]);
+    expect(match[0].winter!.chillHours).toEqual([75, 75]);
   });
 
   it('delete removes the record', async () => {
@@ -112,7 +112,7 @@ describe('userCrops store', () => {
     const c = await addUserCrop({ name: 'Pecan', chillHours: 600 });
     // id regex + length, chill range min<=max, winter present, spring/summer null.
     expect(c.id).toMatch(LOADER_ID);
-    expect(c.winter.chillHours[0]).toBeLessThanOrEqual(c.winter.chillHours[1]);
+    expect(c.winter!.chillHours[0]).toBeLessThanOrEqual(c.winter!.chillHours[1]);
     expect(['stone fruit', 'pome fruit', 'cherry']).toContain(c.category);
     expect(c.winter).toBeTruthy();
     expect(c.spring).toBeNull();

@@ -30,6 +30,9 @@ function seasonComfort(s: SeasonResult): number | null {
   if (s.verdict === 'no-data' || s.future == null) return null;
   switch (s.season) {
     case 'winter':
+      // Prefer the poor-winter margin: crops that all pass 100% of winters still differ in how
+      // close a bad winter comes to their need. 0 margin -> 0.5, double the need -> 1.
+      if (s.margin != null && Number.isFinite(s.margin)) return clamp01(0.5 + s.margin / 2);
       return clamp01(s.future / 100);
     case 'spring':
       return clamp01(1 - s.future / 100);

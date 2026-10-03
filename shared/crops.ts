@@ -17,6 +17,7 @@
  * `CROP_OPTIONS` is therefore synchronously available (used at render time by the planner/picker).
  */
 import { z } from 'zod';
+import { CONVERSION_SOURCE, hoursToPortions, portionsToHours } from './chillConversion';
 import rawCrops from './crops.data.json';
 
 export interface Sourced {
@@ -26,15 +27,32 @@ export interface Sourced {
   source: string;
 }
 
+export const CROP_CATEGORIES = ['stone fruit', 'pome fruit', 'cherry', 'nut', 'vine', 'berry'] as const;
+export type CropCategory = (typeof CROP_CATEGORIES)[number];
+
+export type WinterRequirement = Sourced & {
+  /** chill-hour range (Weinberger 0–7.2 °C model), shown to growers */
+  chillHours: [number, number];
+  /** true when chillHours was converted from chillPortions rather than sourced directly */
+  hoursDerived: boolean;
+  /** chill-portion range (Dynamic Model). THIS is what winter is scored on. */
+  chillPortions: [number, number];
+  /** true when chillPortions was converted from chillHours rather than sourced directly */
+  portionsDerived: boolean;
+  /** where chillPortions came from */
+  portionsSource: string;
+};
+
 export interface CropOption {
   id: string;
   crop: string;
   type: string;
-  category: 'stone fruit' | 'pome fruit' | 'cherry';
-  winter: Sourced & {
-    /** chill-hour range for this class (Weinberger 0–7.2 °C model) */
-    chillHours: [number, number];
-  };
+  category: CropCategory;
+  /**
+   * Winter chill requirement, or null when no chill figure fits our model for this crop (e.g.
+   * grapevines). A null winter is reported as "not scored" and never drives the verdict.
+   */
+  winter: WinterRequirement | null;
   spring:
     | (Sourced & {
         /** months (1–12) when the crop is usually flowering in Victoria */
@@ -69,13 +87,25 @@ const cropSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/, 'id must be lowercase alphanumeric/hyphen').max(60),
   crop: z.string().min(1),
   type: z.string().min(1),
-  category: z.enum(['stone fruit', 'pome fruit', 'cherry']),
+  category: z.enum(CROP_CATEGORIES),
   heatNote: z.string().min(1).max(300),
-  winter: sourced.extend({
-    chillHours: z
-      .tuple([z.number().int().nonnegative(), z.number().int().nonnegative()])
-      .refine(([lo, hi]) => lo <= hi, 'chillHours must be [min, max] with min <= max'),
-  }),
+  // Give chillHours, chillPortions, or both. Whichever is missing is converted from the other
+  // (Brunt et al. 2017, Table 1) and flagged. null = no chill figure fits our model for this crop.
+  winter: sourced
+    .extend({
+      chillHours: z
+        .tuple([z.number().int().nonnegative(), z.number().int().nonnegative()])
+        .refine(([lo, hi]) => lo <= hi, 'chillHours must be [min, max] with min <= max')
+        .optional(),
+      chillPortions: z
+        .tuple([z.number().nonnegative(), z.number().nonnegative()])
+        .refine(([lo, hi]) => lo <= hi, 'chillPortions must be [min, max] with min <= max')
+        .optional(),
+      portionsSource: z.string().optional(),
+    })
+    .refine((w) => Boolean(w.chillHours || w.chillPortions), 'winter needs chillHours or chillPortions (or set winter to null)')
+    .refine((w) => !w.chillPortions || Boolean(w.portionsSource), 'chillPortions needs a portionsSource')
+    .nullable(),
   spring: sourced
     .extend({
       floweringMonths: z.array(z.number().int().min(1).max(12)).min(1),
@@ -104,17 +134,72 @@ const cropsSchema = z
  * identical to `CropOption`, so the cast is a formality; we keep the hand-written interfaces as the
  * public types so no downstream type identity changes. `Object.freeze` guards the read-only singleton.
  */
-export const CROP_OPTIONS: CropOption[] = Object.freeze(cropsSchema.parse(rawCrops)) as CropOption[];
+const round1 = (n: number) => Math.round(n * 10) / 10;
+const round10 = (n: number) => Math.round(n / 10) * 10;
 
-export function cropLabel(c: CropOption): string {
-  return `${c.crop}, ${c.type.toLowerCase()}`;
+type RawWinter = Sourced & { chillHours?: [number, number]; chillPortions?: [number, number]; portionsSource?: string };
+
+/**
+ * Complete a winter requirement: the scoring figure (chill portions) and the grower-facing figure
+ * (chill hours). Whichever wasn't sourced is converted from the other and flagged as derived.
+ */
+export function withPortions(w: RawWinter): WinterRequirement {
+  const { chillHours, chillPortions, portionsSource, ...rest } = w;
+  if (chillPortions) {
+    return {
+      ...rest,
+      chillPortions,
+      portionsDerived: false,
+      portionsSource: portionsSource ?? '',
+      chillHours: chillHours ?? [round10(portionsToHours(chillPortions[0])), round10(portionsToHours(chillPortions[1]))],
+      hoursDerived: !chillHours,
+    };
+  }
+  if (!chillHours) throw new Error('winter needs chillHours or chillPortions');
+  return {
+    ...rest,
+    chillHours,
+    hoursDerived: false,
+    chillPortions: [round1(hoursToPortions(chillHours[0])), round1(hoursToPortions(chillHours[1]))],
+    portionsDerived: true,
+    portionsSource: CONVERSION_SOURCE,
+  };
 }
 
-/** Default chill requirement used for scoring: the middle of the class range. */
+/**
+ * Validate once at module load. A `ZodError` here fails the build, tests, server startup and tsx
+ * scripts rather than silently serving a partial catalogue. `Object.freeze` guards the singleton.
+ */
+export const CROP_OPTIONS: CropOption[] = Object.freeze(
+  cropsSchema.parse(rawCrops).map((c) => ({ ...c, winter: c.winter ? withPortions(c.winter) : null })),
+) as CropOption[];
+
+/** Words that keep their capital letter inside a label (proper adjectives). */
+const PROPER = /^(Japanese|European|Chinese|Asian|American)\b/;
+
+/** "Plum, Japanese types", "Peach / nectarine, standard-chill varieties". */
+export function cropLabel(c: CropOption): string {
+  const type = PROPER.test(c.type) ? c.type : c.type.charAt(0).toLowerCase() + c.type.slice(1);
+  return `${c.crop}, ${type}`;
+}
+
+/**
+ * Default chill-HOURS figure shown in the "your variety needs" box: the middle of the class range.
+ * 0 for crops with no winter requirement (the box isn't shown for them).
+ */
 export function defaultRequirement(c: CropOption): number {
-  return Math.round((c.winter.chillHours[0] + c.winter.chillHours[1]) / 2);
+  return c.winter ? Math.round((c.winter.chillHours[0] + c.winter.chillHours[1]) / 2) : 0;
+}
+
+/** Default chill-PORTIONS requirement used for scoring, or null when winter isn't scored. */
+export function defaultPortions(c: CropOption): number | null {
+  return c.winter ? Math.round(((c.winter.chillPortions[0] + c.winter.chillPortions[1]) / 2) * 10) / 10 : null;
 }
 
 export function hasIndicativeData(c: CropOption): boolean {
-  return c.winter.indicative || Boolean(c.spring?.indicative) || Boolean(c.summer?.indicative);
+  return (
+    Boolean(c.winter && (c.winter.indicative || c.winter.portionsDerived || c.winter.hoursDerived)) ||
+    Boolean(c.spring?.indicative) ||
+    Boolean(c.summer?.indicative)
+  );
 }

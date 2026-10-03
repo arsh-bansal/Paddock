@@ -1,7 +1,7 @@
 import { createStore, del, entries, get, set, type UseStore } from "idb-keyval";
 import type { BriefState } from "../components/Brief";
 import type { PickedLocation } from "../components/LocationPicker";
-import type { OptionState } from "../components/OptionPicker";
+import type { OptionState } from "./optionState";
 import type { ClimateAnalysis } from "../../shared/types";
 
 /**
@@ -64,6 +64,13 @@ async function guard<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+/** Strictly increasing save times, so two saves in the same millisecond still sort correctly. */
+let lastSavedMs = 0;
+function nextSavedAt(): string {
+  lastSavedMs = Math.max(Date.now(), lastSavedMs + 1);
+  return new Date(lastSavedMs).toISOString();
+}
+
 const newId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -88,7 +95,7 @@ export async function saveReport(
       ...input,
       id: newId(),
       version: RECORD_VERSION,
-      savedAt: new Date().toISOString(),
+      savedAt: nextSavedAt(),
     };
     const m: SavedReportMeta = {
       id: record.id,

@@ -12,7 +12,7 @@
 | Autumn | Mar – May | rainfall, days ≥30 °C |
 | Whole year | Jan – Dec | rainfall, evaporation (Hargreaves), water shortfall |
 
-Per crop, winter, spring and summer each get a verdict; the overall verdict is the **worst season**.
+Per crop, winter (scored in **chill portions**), spring and summer each get a verdict; the overall verdict is the **worst season**. Summer is shown but not scored while no crop has a sourced heat limit. See `docs/crop-data-sources.md`, "Scoring model".
 Rainfall projections use a monthly ratio (clamped 0.5–1.5×). Incomplete seasons are `null`, never under-counted.
 
 **Task 9, report + local save.**
@@ -35,10 +35,11 @@ If `ClimateAnalysis` changes shape, bump `schemaVersion` (saved reports check it
 
 ## Placeholder data (must be replaced)
 
-All crop thresholds in `shared/crops.ts` are `indicative: true`:
-- frost damage is -2 °C for every crop (rule of thumb),
-- `hotDaysTolerated` uses app-defined bands (5/10/15), **not** published tolerances.
-The UI and PDF mark these as "indicative".
+Crop thresholds now live in `shared/crops.data.json` (Huu). Still indicative:
+- chill portions for every crop except sweet cherry are converted from hours (Brunt et al. 2017, Table 1),
+- frost damage temperatures are from a US table (WSU/USU), and the frost count itself is a district estimate,
+- no crop has a sourced heat limit, so summer is not scored.
+The UI and PDF mark these.
 
 ## Known limits
 - Frost is district-level (10–25 km grid). Frost hollows are colder.

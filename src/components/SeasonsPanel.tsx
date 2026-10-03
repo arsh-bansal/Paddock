@@ -44,7 +44,7 @@ export function SeasonsPanel({ analysis }: { analysis: ClimateAnalysis }) {
         </table>
       </div>
       <p className="text-sm text-muted">
-        Frost figures come from a roughly 10–25 km weather grid, so treat them as district frost risk. Frost hollows on your block can be colder.
+        Frost figures come from a roughly 10–25 km weather grid, which smooths out cold nights, so they undercount frost. Treat them as a district estimate: frost hollows on your block can be much colder.
       </p>
     </section>
   );

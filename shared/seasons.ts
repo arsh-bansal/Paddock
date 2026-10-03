@@ -14,7 +14,8 @@ import {
   chillHours, chillPortions, dayOfYear, et0Hargreaves, hourlyTemps, monthOf, percentile, summarise, yearOf,
   type DailyWeather, type Summary,
 } from './chill';
-import type { CropOption } from './crops';
+import { hoursToPortions } from './chillConversion';
+import { defaultPortions, type CropOption } from './crops';
 import type { Verdict } from './types';
 
 export const HOT_DAY_C = 35;
@@ -187,6 +188,11 @@ export interface SeasonResult {
   threshold: number | null;
   /** True while the crop threshold behind this result is not yet sourced */
   indicative: boolean;
+  /**
+   * Winter only: how far a poor (1-in-10) projected winter clears the need, as a fraction of the
+   * need ((p10 - need) / need). Negative = falls short. Used to rank crops that all pass.
+   */
+  margin?: number | null;
 }
 
 export interface CropEvaluation {
@@ -195,8 +201,12 @@ export interface CropEvaluation {
   overall: SeasonVerdict;
   seasons: SeasonResult[];
   heatNote: string;
-  /** Chill hours used for scoring (crop default or the grower's own figure) */
-  chillRequirement: number;
+  /** Chill hours shown to the grower (crop default or their own figure); null when winter isn't scored */
+  chillRequirement: number | null;
+  /** Chill portions actually scored against (Dynamic Model); null when winter isn't scored */
+  chillPortionsRequirement: number | null;
+  /** True when the portions requirement was converted from hours rather than sourced directly */
+  portionsConverted: boolean;
 }
 
 /** Share of years, 0–100, where `test` is true. */
@@ -205,12 +215,13 @@ function pctYears(values: number[], test: (v: number) => boolean): number | null
 }
 
 /**
- * Winter: "safe winter chill" (Luedeling et al. 2009).
+ * Winter: "safe winter chill" (Luedeling et al. 2009), scored in Chill Portions (Dynamic Model).
  *  viable: the 10th-percentile winter meets the need; at-risk: the median does; else not-viable.
+ * `requirement` and `threshold` are in chill portions.
  */
 export function evaluateWinter(base: YearStat[], fut: YearStat[], requirement: number, indicative: boolean): SeasonResult {
-  const b = collect(base, (y) => y.winter?.chillHours);
-  const f = collect(fut, (y) => y.winter?.chillHours);
+  const b = collect(base, (y) => y.winter?.chillPortions);
+  const f = collect(fut, (y) => y.winter?.chillPortions);
   if (f.length === 0) return { season: 'winter', verdict: 'no-data', baseline: null, future: null, threshold: requirement, indicative };
   const verdict: Verdict =
     percentile(f, 10) >= requirement ? 'viable' : percentile(f, 50) >= requirement ? 'at-risk' : 'not-viable';
@@ -221,6 +232,7 @@ export function evaluateWinter(base: YearStat[], fut: YearStat[], requirement: n
     future: pctYears(f, (v) => v >= requirement),
     threshold: requirement,
     indicative,
+    margin: requirement > 0 ? (percentile(f, 10) - requirement) / requirement : null,
   };
 }
 
@@ -260,23 +272,21 @@ export function evaluateSpring(base: YearStat[], fut: YearStat[], crop: CropOpti
 /**
  * Summer: hot days per summer against the crop's tolerance.
  *  viable: even a hot summer (90th percentile) stays within tolerance; at-risk: a typical one does; else not-viable.
+ * With no sourced tolerance (crop.summer null) the season is NOT scored ('no-data'), but the
+ * location's typical hot days are still reported so growers see the change.
  */
 export function evaluateSummer(base: YearStat[], fut: YearStat[], crop: CropOption): SeasonResult {
   const spec = crop.summer;
-  if (!spec) return { season: 'summer', verdict: 'no-data', baseline: null, future: null, threshold: null, indicative: false };
   const b = collect(base, (y) => y.summer?.hotDays);
   const f = collect(fut, (y) => y.summer?.hotDays);
-  if (f.length === 0) return { season: 'summer', verdict: 'no-data', baseline: null, future: null, threshold: spec.hotDaysTolerated, indicative: spec.indicative };
+  const baseline = b.length ? percentile(b, 50) : null;
+  const future = f.length ? percentile(f, 50) : null;
+  if (!spec || f.length === 0) {
+    return { season: 'summer', verdict: 'no-data', baseline, future, threshold: spec?.hotDaysTolerated ?? null, indicative: Boolean(spec?.indicative) };
+  }
   const limit = spec.hotDaysTolerated;
   const verdict: Verdict = percentile(f, 90) <= limit ? 'viable' : percentile(f, 50) <= limit ? 'at-risk' : 'not-viable';
-  return {
-    season: 'summer',
-    verdict,
-    baseline: b.length ? percentile(b, 50) : null,
-    future: percentile(f, 50),
-    threshold: limit,
-    indicative: spec.indicative,
-  };
+  return { season: 'summer', verdict, baseline, future, threshold: limit, indicative: spec.indicative };
 }
 
 const SEVERITY: Record<SeasonVerdict, number> = { 'no-data': -1, viable: 0, 'at-risk': 1, 'not-viable': 2 };
@@ -286,17 +296,55 @@ export function overallVerdict(results: SeasonResult[]): SeasonVerdict {
   return results.reduce<SeasonVerdict>((worst, r) => (SEVERITY[r.verdict] > SEVERITY[worst] ? r.verdict : worst), 'no-data');
 }
 
+export interface EvaluateOptions {
+  /**
+   * The grower's own chill-hours figure for their variety (nursery figures are usually in hours).
+   * Converted to chill portions for scoring. Omit to use the crop's own portions requirement.
+   */
+  chillHoursOverride?: number;
+}
+
 export function evaluateCrop(
   crop: CropOption,
   label: string,
   baseYears: YearStat[],
   futureYears: YearStat[],
-  chillRequirement: number,
+  opts: EvaluateOptions = {},
 ): CropEvaluation {
+  const winterReq = crop.winter;
+  const spring = evaluateSpring(baseYears, futureYears, crop);
+  const summer = evaluateSummer(baseYears, futureYears, crop);
+
+  // No chill figure that fits our model (e.g. grapevines): winter is reported as not scored and
+  // the verdict comes from the other seasons.
+  if (!winterReq) {
+    const winter: SeasonResult = { season: 'winter', verdict: 'no-data', baseline: null, future: null, threshold: null, indicative: false };
+    const seasons = [winter, spring, summer];
+    return {
+      id: crop.id, label, overall: overallVerdict(seasons), seasons, heatNote: crop.heatNote,
+      chillRequirement: null, chillPortionsRequirement: null, portionsConverted: false,
+    };
+  }
+
+  const override = opts.chillHoursOverride;
+  const hasOverride = override != null && Number.isFinite(override);
+  const chillRequirement = hasOverride ? override : Math.round((winterReq.chillHours[0] + winterReq.chillHours[1]) / 2);
+  const portions = hasOverride ? Math.round(hoursToPortions(override) * 10) / 10 : defaultPortions(crop)!;
+  const portionsConverted = hasOverride || winterReq.portionsDerived;
+
   const seasons = [
-    evaluateWinter(baseYears, futureYears, chillRequirement, crop.winter.indicative),
-    evaluateSpring(baseYears, futureYears, crop),
-    evaluateSummer(baseYears, futureYears, crop),
+    evaluateWinter(baseYears, futureYears, portions, winterReq.indicative || portionsConverted),
+    spring,
+    summer,
   ];
-  return { id: crop.id, label, overall: overallVerdict(seasons), seasons, heatNote: crop.heatNote, chillRequirement };
+  return {
+    id: crop.id,
+    label,
+    overall: overallVerdict(seasons),
+    seasons,
+    heatNote: crop.heatNote,
+    chillRequirement,
+    chillPortionsRequirement: portions,
+    portionsConverted,
+  };
 }

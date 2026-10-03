@@ -18,11 +18,11 @@
  */
 import { createStore, del, entries, set, type UseStore } from 'idb-keyval';
 import { z } from 'zod';
-import type { CropOption } from '../../shared/crops';
+import { withPortions, type CropOption } from '../../shared/crops';
 
 /** Longest crop name we persist; matches the loader's string sanity caps. */
 const NAME_MAX = 60;
-/** Chill-hours cap; mirrors `OptionPicker`'s existing requirement input range (0..2000). */
+/** Chill-hours cap; mirrors the variety chill-hours input range (0..2000). */
 const CHILL_MAX = 2000;
 
 /** Default category for user crops. `category` only affects display grouping, never verdicts; the
@@ -129,7 +129,7 @@ function toCropOption(rec: StoredUserCrop): CropOption {
     type: USER_CROP_TYPE,
     category: DEFAULT_CATEGORY,
     heatNote: '',
-    winter: { chillHours: rec.chillHours, indicative: true, source: USER_CROP_SOURCE },
+    winter: withPortions({ chillHours: rec.chillHours, indicative: true, source: USER_CROP_SOURCE }),
     spring: null,
     summer: null,
   };

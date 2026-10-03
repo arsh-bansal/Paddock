@@ -11,19 +11,17 @@ Stone fruit, cherries, apples and pears need a certain amount of winter cold ("c
 ## What it does
 
 1. **Pick the block.** Preset orchard districts (Shepparton, Cobram, Harcourt, Wandin North, Bacchus Marsh, Swan Hill), phone location, or coordinates.
-2. **Pick the options.** Crop types with indicative chill needs, or the exact figure from the nursery.
-3. **Get the answer.**
-   - Season by season for the location: winter chill, spring frost, summer heat, autumn heat and rain, and the yearly water balance, then vs 2026–2045.
-   - Real winter chill for every year 1995–2025, and the projected range for 2026–2045.
-   - A verdict per crop for winter, spring and summer; the overall verdict is the worst season.
-   - A plain-English summary written by Gemini from the computed numbers only.
-   - Practical ways to reduce the risk.
-4. **Keep it.** Download a 3-page PDF report, or save it on the device (opens offline).
+2. **See what suits it**, with no crop list to choose from first:
+   - **Grown around here today:** the district's current crops, each with its 2026–2045 verdict.
+   - **Could also suit this area:** other crops whose climate fit still works.
+   - **Struggles here:** the rest, with the reason.
+
+   Each crop is judged season by season (winter chill, spring frost, summer heat), and a grower can adjust any crop for their exact variety.
+3. **Understand the climate.** Water (irrigation today from ABS, and how the climate's water shortfall changes), season-by-season table, 50 years of winter chill, a plain-English summary (Gemini, from computed numbers only), and ways to reduce the risk.
+4. **Keep it.** Download a PDF report or save it on the device (opens offline).
 5. **Check a tree.** Photo triage for heat, water stress, pests and disease using Gemini vision.
 
-Details of the season engine and report: `docs/seasons-and-reports.md`.
-
-Everything is computed from real data at request time. Nothing is hardcoded.
+Details: `docs/regional-crops.md`, `docs/water.md`, `docs/seasons-and-reports.md`, `docs/crop-data-sources.md`.
 
 ## How it works
 
@@ -77,14 +75,15 @@ npm run build
 npm start                   # serves app + API on :8787
 ```
 
-Other scripts: `npm test`, `npm run lint`, `npm run snapshot` (pre-fetch climate data for all preset districts into `data/cache/` so the demo works offline).
+Other scripts: `npm test`, `npm run lint`, `npm run import:abs -- <AGCDCASGS202021.xlsx>` (rebuild district crop lists from ABS data), `npm run import:abs-water -- <WUAFDCLGA202021.xlsx>` (rebuild irrigation figures), `npm run snapshot` (pre-fetch climate data for all preset districts into `data/cache/` so the demo works offline).
 
 ## Limitations (say these out loud, judges respect it)
 
 - Three models and one emissions pathway (HighResMIP future runs follow a high-emissions pathway; verify this) don't span the full range of futures.
 - The grid is roughly 10–25 km, so frost hollows, slopes and aspect on a specific block can differ.
-- **All crop thresholds in `shared/crops.ts` (chill, frost, heat) are indicative placeholders, not sourced figures.** Replace them before demo day.
-- Frost is district-level, and flowering dates don't yet shift earlier with warming.
+- Chill-portion requirements are converted from chill hours for every crop except sweet cherry. See `docs/crop-data-sources.md`.
+- Spring frost comes from a 10–25 km grid that undercounts cold nights: a district estimate, not a block estimate. Flowering dates don't yet shift earlier with warming.
+- Summer heat is reported but not scored: no crop has a sourced heat limit yet.
 - Chill Hours is a crude model in warm climates; Chill Portions are shown as a cross-check.
 - The photo check is triage, not diagnosis.
 

@@ -4,8 +4,8 @@ Owner: crop-data + appropriate-crops-filter slice
 Status: Draft for review (design only — no code changes)
 Project folder: `/Users/duynguyen/side_project/Hackathon/Paddock`. All paths below are relative to it.
 
-Related docs: `docs/design-crop-db-ranking.md` (JSON crop DB + zod loader + `rankCrops`, already
-implemented), `docs/design-crop-recommendation.md` (recommendation UX reframe), `docs/crop-data-sources.md`
+Related docs: `docs/design/design-crop-db-ranking.md` (JSON crop DB + zod loader + `rankCrops`, already
+implemented), `docs/design/design-crop-recommendation.md` (recommendation UX reframe), `docs/crop-data-sources.md`
 (data contract).
 
 This document covers **one** feature: letting a grower add their **own** crop (name + winter chill

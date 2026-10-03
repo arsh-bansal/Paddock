@@ -1,56 +1,46 @@
 /**
- * Pre-verdict, chill-only "appropriate for this block" pre-filter.
+ * Pre-verdict, chill-only "suits this block" split for the Step-2 crop picker.
  *
- * This is a lightweight DISPLAY filter for the Step-2 crop picker, NOT a verdict: it keeps a crop iff
- * the block's FUTURE median chill reaches the MIDPOINT of the crop's `[min, max]` chill range (the
- * chill at which the typical cultivar in that class performs, rather than the bare minimum that only
- * the easiest cultivar needs). It deliberately does NOT call `evaluateCrop` or `rankCrops` — it is a
- * distinct stage from `shared/appropriateCrops.ts` (which filters post-verdict `CropEvaluation[]`).
+ * A crop suits the block iff the block's FUTURE median chill PORTIONS reach the midpoint of the
+ * crop's chill-portions range (the typical cultivar in that class). Crops that don't are NOT hidden:
+ * the picker shows them in a separate "struggles here" group with the reason, because a grower
+ * deciding what to plant needs to see what's ruled out and why.
  *
- * When the future median is NaN / non-finite (a sparse location → `summarise([])` yields `NaN`), every
- * crop is treated as appropriate so the picker is never mysteriously empty (the caller shows a note).
- *
- * Runtime-agnostic: pure array work over in-memory values, no `fs` or Node builtins, so it behaves
- * identically under Vite, esbuild, tsx and vitest. Pure: it never mutates its input and preserves input
- * order (the output is a subsequence of the input — none added, reordered, or duplicated).
+ * This is a display split only. It does not call `evaluateCrop` or `rankCrops`. When the future
+ * median is non-finite (sparse location), every crop counts as suited so the picker is never empty.
+ * Pure: never mutates input and preserves input order within each group.
  */
 import type { CropOption } from './crops';
 
 /**
- * The UN-ROUNDED midpoint of a crop's `[min, max]` chill range — the chosen "appropriate" cut-point.
- * For a user crop stored as `[v, v]` this is exactly `v`, so user-crop behaviour is unchanged from the
- * old minimum rule. Kept private (not exported): no public-API change and no new import for callers.
- * Deliberately independent of `defaultRequirement` in `shared/crops.ts` (which rounds and lives in a
- * forbidden file) so a `.5` midpoint keeps exact boundary semantics.
+ * Un-rounded midpoint of a crop's chill-portions range. A user crop `[v, v]` gives exactly `v`.
+ * null for crops whose winter isn't scored.
  */
-function chillMidpoint(crop: CropOption): number {
-  return (crop.winter.chillHours[0] + crop.winter.chillHours[1]) / 2;
+export function chillPortionsMidpoint(crop: CropOption): number | null {
+  return crop.winter ? (crop.winter.chillPortions[0] + crop.winter.chillPortions[1]) / 2 : null;
 }
 
-/**
- * Per-crop predicate: is this crop appropriate for a block with the given future median chill?
- * A non-finite median (NaN / ±Infinity) is treated as "unavailable", in which case the crop is kept
- * (show-all fallback). Otherwise keep iff median >= the crop's chill-range midpoint.
- */
-export function isAppropriateByChill(
-  crop: CropOption,
-  futureMedianChillHours: number,
-): boolean {
-  if (!Number.isFinite(futureMedianChillHours)) return true; // unavailable → keep all
-  return futureMedianChillHours >= chillMidpoint(crop);
+export function isAppropriateByChill(crop: CropOption, futureMedianChillPortions: number): boolean {
+  if (!Number.isFinite(futureMedianChillPortions)) return true; // unavailable -> keep all
+  const need = chillPortionsMidpoint(crop);
+  if (need == null) return true; // chill isn't scored for this crop, so chill can't rule it out
+  return futureMedianChillPortions >= need;
 }
 
-/**
- * Pure. Returns only the crops whose chill-range midpoint is met by the block's future median chill,
- * preserving input order. A NaN / non-finite median returns the full input list (as a copy) so the
- * picker is never empty. No mutation of the input array or its elements; the returned array is always
- * a NEW array reference.
- */
-export function filterAppropriateByChill(
-  crops: CropOption[],
-  futureMedianChillHours: number,
-): CropOption[] {
-  if (!Number.isFinite(futureMedianChillHours)) return crops.slice(); // show all; copy keeps it pure
-  return crops.filter((crop) => isAppropriateByChill(crop, futureMedianChillHours));
+export function filterAppropriateByChill(crops: CropOption[], futureMedianChillPortions: number): CropOption[] {
+  if (!Number.isFinite(futureMedianChillPortions)) return crops.slice();
+  return crops.filter((c) => isAppropriateByChill(c, futureMedianChillPortions));
 }
 
+export interface ChillPartition {
+  suited: CropOption[];
+  struggling: CropOption[];
+}
+
+/** Split crops into those a typical future winter suits and those it doesn't. */
+export function partitionByChill(crops: CropOption[], futureMedianChillPortions: number): ChillPartition {
+  const suited: CropOption[] = [];
+  const struggling: CropOption[] = [];
+  for (const c of crops) (isAppropriateByChill(c, futureMedianChillPortions) ? suited : struggling).push(c);
+  return { suited, struggling };
+}

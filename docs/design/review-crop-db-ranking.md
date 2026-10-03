@@ -2,7 +2,7 @@
 
 Project: `/Users/duynguyen/side_project/Hackathon/Paddock`
 Branch: `feature/crop-db-ranking` (confirmed via `git branch --show-current`)
-Reviewed against: `docs/design-crop-db-ranking.md`, `docs/crop-data-sources.md`
+Reviewed against: `docs/design/design-crop-db-ranking.md`, `docs/crop-data-sources.md`
 Scope: Item 2 (JSON data file + zod loader), Item 3 (10 crops transcribed), Item 1 (rankCrops + wiring)
 
 ## Verdict: APPROVE WITH MINOR CHANGES

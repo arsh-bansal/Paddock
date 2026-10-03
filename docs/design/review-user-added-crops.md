@@ -3,7 +3,7 @@
 - Project folder: `/Users/duynguyen/side_project/Hackathon/Paddock`
 - Branch: `feature/crop-db-ranking`
 - Mode: **review-only** (nothing modified)
-- Design reference: `docs/design-user-added-crops.md`
+- Design reference: `docs/design/design-user-added-crops.md`
 - Reviewer: Code Reviewer Agent
 
 ---
@@ -62,7 +62,7 @@ shared/crops.ts` returns nothing, and the crops.ts diff is entirely the loader r
 user-crop code. Confirmed PRE-EXISTING.
 
 **`OptionResults` import removal from Planner:** this is a PRE-EXISTING Part-A/recommendation-slice
-change (documented in `docs/review-crop-db-ranking.md` and `docs/review-crop-recommendation.md` — the
+change (documented in `docs/design/review-crop-db-ranking.md` and `docs/design/review-crop-recommendation.md` — the
 standalone `<OptionResults>` was already removed and the list rendering replaced). **Not introduced
 by Part B.** `OptionResults.tsx` is zero-diff.
 

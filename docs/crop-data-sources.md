@@ -316,3 +316,84 @@ having **no citable source** (see the "Values that could NOT be sourced credibly
 `hotDaysTolerated` is marked UNSOURCED for all 10 crops, and the UniMelb Pursuit article is noted as
 confirming heat/sunburn risk is real but publishing no day-count threshold). No sources are invented
 for the summer/water/frost bands; they stand or fall as the app's own defensible judgement.
+
+---
+
+## Scoring model and October 2026 review decisions
+
+**Winter is scored in Chill Portions (Dynamic Model), not Chill Hours.** Reasons:
+
+1. **Like-for-like comparison.** The engine counted gross Weinberger chill hours (every hour 0–7.2 °C,
+   1 April–30 September), but the main hour figures above come from the Chill Hours Tracker's *net*
+   model (warm hours subtract, counting from 1 May). Net requirements are lower than a gross count at
+   the same site, so the app was comparing a large number against a small one, and the Hort Innovation
+   cherry figures are in Chill Portions anyway.
+2. **Australian standard.** Hort Innovation and Darbyshire et al. work in Chill Portions.
+3. **Warming sensitivity.** On real Open-Meteo data for Shepparton, projected chill hours fall ~25%
+   (957 → 714) but chill portions only ~10% (102 → 92). Chill hours are known to overstate the effect
+   of warming, which made the app hide apples and pears at Shepparton, Australia's main pome district.
+
+**How requirements become portions.**
+- Sweet cherry (both classes) are sourced **directly** in portions from Brunt et al. (2017), Tables 1–2:
+  standard (Bing, Summit, Sylvia: High–Very high) = 60–80 CP; low-chill (Lapins ~45–66, Rainier ~45,
+  Stella moderate-high) = 45–60 CP. The standard-cherry chill-hour range shown to growers changed from
+  600–800 h (tracker) to 1000–1500 h (the guide's High band), because the Australian cherry-specific
+  source takes precedence.
+- Every other crop's hour range is **converted** with the same guide's Table 1 cross-model bands
+  (300 h ≈ 20 CP, 500 ≈ 40, 750 ≈ 50, 1000 ≈ 60, 1500 ≈ 80; linear between). Converted values are
+  flagged `portionsDerived` and shown as "converted" / indicative in the app. The table maps rating
+  bands, not exact equivalents, so a direct portions figure should replace each conversion when found.
+
+**Summer heat is reported but not scored.** No published "days ≥35 °C tolerated" figure was found for
+any crop (see the table). The placeholder bands (5/10/15 days) marked every crop "Poor fit" at
+Shepparton, Cobram and Swan Hill even under *today's* climate, where these crops grow commercially.
+`summer` is therefore `null` for every crop: the app still shows each crop's typical hot days then vs
+projected, labelled "not scored yet". The loader still accepts `hotDaysTolerated` (number or
+`high`/`medium`/`low`) for when a real figure is sourced.
+
+**Spring frost is a district estimate.** Real data gives Shepparton under 1 day ≤0 °C a year in
+Aug–Oct, far fewer than orchards there experience, because the 10–25 km grid smooths out radiative
+frost nights. Frost thresholds are filled in from the WSU/USU table (source strings now in the JSON)
+but stay `indicative`, and the app labels frost as a district estimate that undercounts frost hollows.
+
+**Still to source:** direct chill-portion requirements for the non-cherry crops (Fadón et al. 2020
+reports several models; Australian stone-fruit and pome work by Darbyshire et al.), and any credible
+heat-tolerance figure.
+
+---
+
+## New crops (October 2026)
+
+Added so districts that grow nuts, grapes and berries can be scored. Every figure below is in
+`shared/crops.data.json` with its source string.
+
+| Crop | Winter (scored) | Spring frost | Sources |
+|---|---|---|---|
+| Almond | 22–32 chill portions, **direct**; hours shown (≈320–420 h) are converted | August bloom, −2.2 °C, indicative | UC Cooperative Extension chill-portion table (Pope; Ramirez et al. 2010; Pope et al. 2014). Bloom late July–early Sept (Qld Government almond crop summary; August pollination per Almond Board of Australia). Crop loss at 27–28 °F at full bloom (UC farm advisor, The Almond Doctor 2018) |
+| Pistachio | 54–60 chill portions, **direct** | not sourced (null) | UC table: Kerman 54–58, Peters 58–65; Sirora 60 (Zhang & Taylor 2011, HortScience, Australian study) |
+| Walnut | 38–54 chill portions, **direct** | not sourced (null) | UC table: Payne 38, Chandler 45–50, Hartley 54 (Luedeling et al. 2009, 2013) |
+| Blueberry, southern highbush | 250–600 h, converted to portions | Sept–Oct, −2.2 °C, indicative | WA DPIRD, *Growing blueberries in Western Australia*. Frost: Michigan State University Extension critical spring temperatures. Victorian flowering: Clayton-Greene & Goubran (1987) |
+| Blueberry, northern highbush | 800–1000 h, converted | Sept–Oct, −2.2 °C, indicative | WA DPIRD and Oregon State Extension PNW 656 (>800 h); upper bound from University of Georgia cultivar notes |
+| Grapes (wine and table) | **not scored** (`winter: null`) | Sept–Oct, −1.1 °C, indicative | AWRI frost fact sheet (−2.2 °C at budburst, −1.1 °C by 4th leaf; Gardea 1987). Frost season Sept–late Oct in Goulburn and Yarra Valleys (Wine Australia final report RT 06/04-1) |
+| European plum (updated) | 55–60 chill portions, **direct** (was converted) | unchanged | UC table: prune 'Improved French' 55–60 |
+
+**Why grapes have no winter score.** Grapevines have a modest chill requirement but no chill figure
+we found fits our Dynamic Model scoring, and the industry sources treat spring frost after budburst
+as the key climate risk. `winter: null` makes the app report winter as "not scored" and judge the
+crop on frost; the chill filter never rules it out.
+
+**Why olives aren't in the database.** Olive flowering depends on winter cold through a different
+process (vernalisation over roughly 5–12 °C, per the International Olive Council catalogue), and we
+found no chill-portion figure or flower frost threshold to source. They stay listed by name as
+"grown here, not yet scored".
+
+**Pistachio and walnut have no spring entry** because we found no sourced flowering-frost figure
+for them in Australian conditions; their spring season shows "no data" rather than a guess.
+
+### What the real data says with these crops
+
+With winter scored in chill portions, every crop in the database is a good fit at all six preset
+districts through 2045 (Swan Hill's poor-winter chill is still ~66 portions). Spring frost from the
+grid rarely flags anything because the grid undercounts cold nights. The climate differences that
+do separate these districts (Swan Hill has ~4× Wandin's hot days and a third of its rainfall) sit
+in summer heat and water, which can't be scored per crop until heat limits are sourced.

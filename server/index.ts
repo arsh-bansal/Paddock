@@ -82,6 +82,16 @@ const explainSchema = z.object({
       v !== null &&
       (v as { schemaVersion?: number }).schemaVersion === 2,
   ),
+  grownHere: z.array(z.string().max(120)).max(25).default([]),
+  water: z
+    .object({
+      orchardIrrigationMlPerHa: z.number().nonnegative().nullable(),
+      shortfallChangeMm: z.number(),
+      extraMlPerHa: z.number(),
+      extraShareOfToday: z.number().nullable(),
+    })
+    .nullable()
+    .default(null),
   crops: z
     .array(
       z.object({
@@ -89,7 +99,9 @@ const explainSchema = z.object({
         label: z.string().max(120),
         overall: verdictEnum,
         heatNote: z.string().max(300),
-        chillRequirement: z.number().min(0).max(3000),
+        chillRequirement: z.number().min(0).max(3000).nullable(),
+        chillPortionsRequirement: z.number().min(0).max(300).nullable(),
+        portionsConverted: z.boolean(),
         seasons: z
           .array(
             z.object({
@@ -99,6 +111,7 @@ const explainSchema = z.object({
               future: z.number().nullable(),
               threshold: z.number().nullable(),
               indicative: z.boolean(),
+              margin: z.number().nullable().optional(),
             }),
           )
           .max(3),
@@ -116,7 +129,7 @@ app.post("/api/explain", aiLimiter, async (req, res) => {
       .json({ error: "Run the analysis and pick at least one option first." });
     return;
   }
-  const text = await explainResult(body.data.analysis, body.data.crops);
+  const text = await explainResult(body.data.analysis, body.data.crops, body.data.grownHere, body.data.water);
   res.json({ text });
 });
 
