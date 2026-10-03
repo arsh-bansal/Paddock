@@ -16,7 +16,7 @@ import { downloadReport } from "../report/download";
 import { AdaptationNotes } from "./AdaptationNotes";
 import { AddCropForm } from "./AddCropForm";
 import { Brief, briefSignature, type BriefState } from "./Brief";
-import { ChillChart } from "./ChillChart";
+import { SeasonCharts } from "./SeasonCharts";
 import { CropResults, type VarietyControl } from "./CropResults";
 import { LocationPicker, type PickedLocation } from "./LocationPicker";
 import { Methods } from "./Methods";
@@ -374,7 +374,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
               />
 
               <SeasonsPanel analysis={analysis} />
-              <ChillChart analysis={analysis} crops={chartCrops(ranked, region)} />
+              <SeasonCharts analysis={analysis} crops={chartCrops(ranked, region)} placeName={placeName} />
               <Brief
                 analysis={analysis}
                 crops={briefCrops}

@@ -50,3 +50,11 @@ The UI and PDF mark these.
 - 30 unit tests (chill, delta change incl. rainfall, ET0, every season metric, verdict rules, saved-report storage).
 - Browser end-to-end: run check → download PDF → save → reload → open saved report with the API blocked → PDF from saved list → delete.
 - Not yet run against the live Open-Meteo API (sandbox had no access). `npm run snapshot` first; it now prints frost, heat and rain as well as chill.
+
+## Season charts
+
+"Every season, past and projected" shows one chart per season (tabs: Winter, Spring, Summer,
+Autumn, Water): real years 1995-2025 as dots, the projected 2026-2045 likely range (10th-90th
+percentile across models) as a band, the typical year dashed, and on Winter each crop's chill need.
+Definitions live in `src/lib/seasonSeries.ts` and are shared by the screen
+(`src/components/SeasonCharts.tsx`) and the PDF, which adds a page with all four non-winter charts.
