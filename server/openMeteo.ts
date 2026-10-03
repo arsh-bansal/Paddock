@@ -13,8 +13,33 @@ const CLIMATE_URL = 'https://climate-api.open-meteo.com/v1/climate';
 
 export const CLIMATE_MODELS = ['EC_Earth3P_HR', 'MPI_ESM1_2_XR', 'MRI_AGCM3_2_S'] as const;
 
-const CACHE_DIR = path.resolve(process.cwd(), 'data', 'cache');
+/**
+ * Two places climate data is kept:
+ *  - data/snapshot/  Preset districts, COMMITTED so the app and the demo work offline. Read-only
+ *                    at runtime; written only by `npm run snapshot`.
+ *  - data/cache/     Any other location someone checks. Git-ignored and disposable (on a hosted
+ *                    server it lives on the instance's temporary disk). Override with PADDOCK_CACHE_DIR.
+ */
+const SNAPSHOT_DIR = path.resolve(process.cwd(), 'data', 'snapshot');
+const CACHE_DIR = path.resolve(process.env.PADDOCK_CACHE_DIR || path.join(process.cwd(), 'data', 'cache'));
+let writeDir = CACHE_DIR;
+
+/** Used by scripts/snapshot.ts so fetched preset data lands in the committed snapshot folder. */
+export function writeToSnapshot(): void {
+  writeDir = SNAPSHOT_DIR;
+}
+
+/**
+ * Small in-memory LRU on top of the files. Each location is a few MB of daily data, so an
+ * unbounded map would eventually exhaust memory on a public server.
+ */
+const MAX_MEMORY_ENTRIES = 40; // two entries (observed + models) per location
 const memoryCache = new Map<string, unknown>();
+function remember(key: string, value: unknown): void {
+  memoryCache.delete(key);
+  memoryCache.set(key, value);
+  while (memoryCache.size > MAX_MEMORY_ENTRIES) memoryCache.delete(memoryCache.keys().next().value as string);
+}
 
 export interface RawDaily {
   elevation?: number;
@@ -30,21 +55,28 @@ export function cacheKey(kind: 'observed' | 'models', lat: number, lon: number):
 }
 
 async function readCache(key: string): Promise<RawDaily | null> {
-  if (memoryCache.has(key)) return memoryCache.get(key) as RawDaily;
-  try {
-    const raw = JSON.parse(await readFile(path.join(CACHE_DIR, `${key}.json`), 'utf8')) as RawDaily;
-    memoryCache.set(key, raw);
-    return raw;
-  } catch {
-    return null;
+  if (memoryCache.has(key)) {
+    const hit = memoryCache.get(key) as RawDaily;
+    remember(key, hit); // mark as recently used
+    return hit;
   }
+  for (const dir of [SNAPSHOT_DIR, CACHE_DIR]) {
+    try {
+      const raw = JSON.parse(await readFile(path.join(dir, `${key}.json`), 'utf8')) as RawDaily;
+      remember(key, raw);
+      return raw;
+    } catch {
+      // not in this folder; try the next
+    }
+  }
+  return null;
 }
 
 async function writeCache(key: string, value: RawDaily): Promise<void> {
-  memoryCache.set(key, value);
+  remember(key, value);
   try {
-    await mkdir(CACHE_DIR, { recursive: true });
-    await writeFile(path.join(CACHE_DIR, `${key}.json`), JSON.stringify(value));
+    await mkdir(writeDir, { recursive: true });
+    await writeFile(path.join(writeDir, `${key}.json`), JSON.stringify(value));
   } catch (err) {
     console.warn(`[cache] could not persist ${key}:`, (err as Error).message);
   }

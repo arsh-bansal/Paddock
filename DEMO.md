@@ -2,7 +2,8 @@
 
 ## Before demo day
 
-- [ ] **Run `npm run snapshot` on good wifi** and commit `data/cache/`. The demo then works with no internet.
+- [x] Preset climate data is committed in `data/snapshot/` (re-run `npm run snapshot` if you add a district).
+- [ ] **Host it** (`docs/deploy.md`) and put the link and a QR code on the pitch slide so judges can try it on their phones. Open it a few minutes before presenting.
 - [ ] **Sanity-check the Shepparton numbers.** Typical winter chill should look plausible against published Goulburn Valley figures. If it's wildly off, tell the team before the judges do.
 - [x] "Grown here today" lists come from the ABS Agricultural Census 2020–21 (`npm run import:abs`).
 - [ ] **Decide on Bacchus Marsh:** ABS records almost no commercial fruit there. Swap it for an active district or leave it to show the app handling that honestly.

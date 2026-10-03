@@ -1,11 +1,14 @@
 /**
- * Pre-fetch climate data for every preset region into data/cache/ so the demo
- * works on bad venue wifi. Commit data/cache/ after running this.
+ * Pre-fetch climate data for every preset region into data/snapshot/ so the app and
+ * the demo work on bad venue wifi. Commit data/snapshot/ after running this.
  *
  *   npm run snapshot
  */
 import { REGION_PRESETS } from '../shared/regions';
 import { analyseLocation } from '../server/analysis';
+import { writeToSnapshot } from '../server/openMeteo';
+
+writeToSnapshot();
 
 for (const r of REGION_PRESETS) {
   const label = `${r.name}, ${r.district}`;

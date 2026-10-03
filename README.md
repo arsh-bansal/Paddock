@@ -52,7 +52,7 @@ Browser (React 19 + Tailwind 4 + Recharts)
    ▼
 Express 5 server (Node 20+)
    ├─ /api/climate   → Open-Meteo (archive + climate) → chill/heat analysis
-   │                    disk + memory cache in data/cache/
+   │                    snapshots in data/snapshot/ (committed), runtime cache in data/cache/
    ├─ /api/explain   → Gemini (plain-English brief, numbers supplied by us)
    ├─ /api/diagnose  → Gemini vision (JSON schema, validated with zod)
    └─ serves dist/ in production
@@ -75,7 +75,9 @@ npm run build
 npm start                   # serves app + API on :8787
 ```
 
-Other scripts: `npm test`, `npm run lint`, `npm run import:abs -- <AGCDCASGS202021.xlsx>` (rebuild district crop lists from ABS data), `npm run import:abs-water -- <WUAFDCLGA202021.xlsx>` (rebuild irrigation figures), `npm run snapshot` (pre-fetch climate data for all preset districts into `data/cache/` so the demo works offline).
+Hosting: see `docs/deploy.md` (Dockerfile included; Google Cloud Run or Render).
+
+Other scripts: `npm test`, `npm run lint`, `npm run import:abs -- <AGCDCASGS202021.xlsx>` (rebuild district crop lists from ABS data), `npm run import:abs-water -- <WUAFDCLGA202021.xlsx>` (rebuild irrigation figures), `npm run snapshot` (pre-fetch climate data for all preset districts into `data/snapshot/`, committed, so they load instantly and offline).
 
 ## Limitations (say these out loud, judges respect it)
 
