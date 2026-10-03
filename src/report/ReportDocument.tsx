@@ -16,6 +16,7 @@ import { adaptationNotes } from "../lib/adaptation";
 import { describeGrown, groupForRegion, grownFor, type RegionCrops } from "../../shared/regionCrops";
 import { waterForRegion, waterOutlook } from "../../shared/regionWater";
 import { districtComparison, outlookText, todayText, WATER_CAVEAT } from "../lib/waterText";
+import { axisFor, SEASON_METRICS, seriesFor, seriesLine, type SeasonSeries } from "../lib/seasonSeries";
 import {
   changeTone,
   describeSeason,
@@ -162,120 +163,60 @@ const int = (n: number) => Math.round(n).toLocaleString("en-AU");
 const period = (p: readonly [number, number]) => `${p[0]}–${p[1]}`;
 const toneColour = { good: C.leaf, bad: C.ember, neutral: C.muted } as const;
 
-function ChillChart({
-  analysis,
-  crops,
+/**
+ * One season's chart: real years as dots, the projected 2026-2045 range as a band with the typical
+ * year dashed, and (winter) each crop's chill need as a dotted line. Handles negative values
+ * (e.g. a wet year's water shortfall).
+ */
+function SeasonChartPdf({
+  series,
+  lines = [],
+  width,
+  height,
 }: {
-  analysis: ClimateAnalysis;
-  crops: CropEvaluation[];
+  series: SeasonSeries;
+  lines?: { id: string; value: number; colour: string }[];
+  width: number;
+  height: number;
 }) {
-  const W = 507;
-  const H = 170;
+  const W = width;
+  const H = height;
   const pad = { l: 34, r: 8, t: 8, b: 18 };
-  const x0 = 1995;
-  const x1 = analysis.future.period[1];
-  const chill = analysis.future.summary.chillPortions;
-  const obs = analysis.observed.flatMap((y) =>
-    y.winter ? [[y.year, y.winter.chillPortions] as const] : [],
-  );
-  // Crops whose winter isn't scored have no chill line to draw.
-  const lined = crops.filter((c): c is CropEvaluation & { chillPortionsRequirement: number } => c.chillPortionsRequirement != null);
-  const reqs = lined.map((c) => c.chillPortionsRequirement);
-  const raw = Math.max(chill.p90, ...reqs, ...obs.map(([, v]) => v)) * 1.08;
-  const step =
-    [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find((st) => raw / st <= 5) ?? 1000;
-  const yMax = Math.ceil(raw / step) * step;
-  const x = (yr: number) =>
-    pad.l + ((yr - x0) / (x1 - x0)) * (W - pad.l - pad.r);
-  const y = (v: number) => pad.t + (1 - v / yMax) * (H - pad.t - pad.b);
-  const [f0, f1] = analysis.future.period;
+  const colour = series.metric.colour;
+  const obs = series.observed;
+  const x0 = obs[0]?.[0] ?? series.baselinePeriod[0];
+  const [f0, f1] = series.period;
+  const band = series.future;
+  const axis = axisFor([...obs.map(([, v]) => v), band.p10, band.p90, ...lines.map((l) => l.value)]);
+  const x = (yr: number) => pad.l + ((yr - x0) / (f1 - x0)) * (W - pad.l - pad.r);
+  const y = (v: number) => pad.t + (1 - (v - axis.min) / (axis.max - axis.min)) * (H - pad.t - pad.b);
 
   return (
     <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
-      {Array.from({ length: yMax / step + 1 }, (_, i) => i * step).map((v) => (
-        <Line
-          key={v}
-          x1={pad.l}
-          x2={W - pad.r}
-          y1={y(v)}
-          y2={y(v)}
-          stroke={C.line}
-          strokeWidth={0.5}
-        />
+      {axis.ticks.map((v) => (
+        <Line key={v} x1={pad.l} x2={W - pad.r} y1={y(v)} y2={y(v)} stroke={v === 0 && axis.min < 0 ? C.muted : C.line} strokeWidth={0.5} />
       ))}
-      {Array.from({ length: yMax / step + 1 }, (_, i) => i * step).map((v) => (
-        <Text
-          key={`l${v}`}
-          x={pad.l - 4}
-          y={y(v) + 2.5}
-          style={{ fontSize: 7 }}
-          fill={C.muted}
-          textAnchor="end"
-        >
-          {int(v)}
+      {axis.ticks.map((v) => (
+        <Text key={`l${v}`} x={pad.l - 4} y={y(v) + 2.5} style={{ fontSize: 7 }} fill={C.muted} textAnchor="end">
+          {v < 0 ? `-${int(-v)}` : int(v)}
         </Text>
       ))}
       {[1995, 2005, 2015, 2025, 2035, 2045]
-        .filter((yr) => yr <= x1)
+        .filter((yr) => yr >= x0 && yr <= f1)
         .map((yr) => (
-          <Text
-            key={yr}
-            x={x(yr)}
-            y={H - 4}
-            style={{ fontSize: 7 }}
-            fill={C.muted}
-            textAnchor="middle"
-          >
+          <Text key={yr} x={x(yr)} y={H - 4} style={{ fontSize: 7 }} fill={C.muted} textAnchor="middle">
             {String(yr)}
           </Text>
         ))}
-      <Rect
-        x={x(f0)}
-        y={pad.t}
-        width={x(f1) - x(f0)}
-        height={H - pad.t - pad.b}
-        fill={C.frostSoft}
-      />
-      <Rect
-        x={x(f0)}
-        y={y(chill.p90)}
-        width={x(f1) - x(f0)}
-        height={y(chill.p10) - y(chill.p90)}
-        fill={C.frost}
-        fillOpacity={0.25}
-      />
-      <Line
-        x1={x(f0)}
-        x2={x(f1)}
-        y1={y(chill.median)}
-        y2={y(chill.median)}
-        stroke={C.frost}
-        strokeWidth={1.2}
-        strokeDasharray="4 3"
-      />
-      {lined.map((c) => {
-        const v = c.seasons.find((t) => t.season === "winter")!.verdict;
-        return (
-          <Line
-            key={c.id}
-            x1={pad.l}
-            x2={W - pad.r}
-            y1={y(c.chillPortionsRequirement)}
-            y2={y(c.chillPortionsRequirement)}
-            stroke={VERDICT[v].fg}
-            strokeWidth={0.9}
-            strokeDasharray="1.5 2"
-          />
-        );
-      })}
-      <Polyline
-        points={obs.map(([yr, v]) => `${x(yr)},${y(v)}`).join(" ")}
-        stroke={C.frost}
-        strokeWidth={0.9}
-        fill="none"
-      />
+      <Rect x={x(f0)} y={pad.t} width={x(f1) - x(f0)} height={H - pad.t - pad.b} fill={C.frostSoft} />
+      <Rect x={x(f0)} y={y(band.p90)} width={x(f1) - x(f0)} height={Math.max(0.5, y(band.p10) - y(band.p90))} fill={colour} fillOpacity={0.25} />
+      <Line x1={x(f0)} x2={x(f1)} y1={y(band.median)} y2={y(band.median)} stroke={colour} strokeWidth={1.2} strokeDasharray="4 3" />
+      {lines.map((l) => (
+        <Line key={l.id} x1={pad.l} x2={W - pad.r} y1={y(l.value)} y2={y(l.value)} stroke={l.colour} strokeWidth={0.9} strokeDasharray="1.5 2" />
+      ))}
+      <Polyline points={obs.map(([yr, v]) => `${x(yr)},${y(v)}`).join(" ")} stroke={colour} strokeWidth={0.9} fill="none" />
       {obs.map(([yr, v]) => (
-        <Circle key={yr} cx={x(yr)} cy={y(v)} r={1.6} fill={C.frost} />
+        <Circle key={yr} cx={x(yr)} cy={y(v)} r={1.6} fill={colour} />
       ))}
     </Svg>
   );
@@ -404,7 +345,16 @@ export function ReportDocument({ analysis, crops, brief, region, placeName }: Re
 
         <View wrap={false}>
           <Text style={s.h2}>Winter chill portions, past and projected</Text>
-          <ChillChart analysis={analysis} crops={crops} />
+          <SeasonChartPdf
+            series={seriesFor(analysis, SEASON_METRICS[0])}
+            width={507}
+            height={170}
+            lines={crops.flatMap((c) =>
+              c.chillPortionsRequirement == null
+                ? []
+                : [{ id: c.id, value: c.chillPortionsRequirement, colour: VERDICT[c.seasons.find((t) => t.season === "winter")!.verdict].fg }],
+            )}
+          />
           <Text style={s.small}>
             {`Dots: real winters (chill portions, April to September). Shaded band: likely range of winters in ${period(analysis.future.period)} across ${analysis.future.models.length} climate models, with the dashed line the typical winter. Dotted lines: each crop's chill need, coloured by its winter result.`}
           </Text>
@@ -486,6 +436,29 @@ export function ReportDocument({ analysis, crops, brief, region, placeName }: Re
             <Text style={s.small}>{WATER_CAVEAT}</Text>
           </View>
         )}
+
+        <View wrap={false}>
+          <Text style={s.h2} break>Every season, past and projected</Text>
+          <Text style={[s.muted, { marginBottom: 6 }]}>
+            {`Dots: real years. Shaded band: likely range in ${period(analysis.future.period)} across ${analysis.future.models.length} climate models; dashed line: the typical year.`}
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: -4 }}>
+            {SEASON_METRICS.slice(1).map((m) => {
+              const ser = seriesFor(analysis, m);
+              return (
+                <View key={m.key} style={{ width: "50%", paddingHorizontal: 4, marginBottom: 10 }}>
+                  <Text style={[s.bold, { color: m.colour }]}>{m.title}</Text>
+                  <Text style={[s.small, { marginTop: 0, marginBottom: 2 }]}>{m.subtitle}</Text>
+                  <SeasonChartPdf series={ser} width={249} height={120} />
+                  <Text style={[s.small, { marginTop: 2 }]}>
+                    {seriesLine(ser)}
+                  </Text>
+                  {m.note && <Text style={[s.small, { marginTop: 1 }]}>{m.note}</Text>}
+                </View>
+              );
+            })}
+          </View>
+        </View>
 
         {anyIndicative && (
           <Text style={s.small}>
