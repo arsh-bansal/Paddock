@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import type { CropEvaluation } from '../../shared/seasons';
 import type { ClimateAnalysis } from '../../shared/types';
-import { fetchBrief } from '../lib/api';
+import { fetchBrief, type WaterFacts } from '../lib/api';
 
 export interface BriefState {
   text: string;
@@ -19,12 +19,14 @@ interface Props {
   crops: CropEvaluation[];
   /** Labels of the crops the district grows today, so the summary can lead with them */
   grownHere?: string[];
+  /** Water facts for the summary (already computed and rounded) */
+  water?: WaterFacts | null;
   aiEnabled: boolean;
   brief: BriefState | null;
   onBrief: (b: BriefState) => void;
 }
 
-export function Brief({ analysis, crops, grownHere = [], aiEnabled, brief, onBrief }: Props) {
+export function Brief({ analysis, crops, grownHere = [], water = null, aiEnabled, brief, onBrief }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const signature = briefSignature(analysis, crops);
@@ -34,7 +36,7 @@ export function Brief({ analysis, crops, grownHere = [], aiEnabled, brief, onBri
     setLoading(true);
     setError(null);
     try {
-      onBrief({ text: (await fetchBrief(analysis, crops, grownHere)).text, signature });
+      onBrief({ text: (await fetchBrief(analysis, crops, grownHere, water)).text, signature });
     } catch (e) {
       setError((e as Error).message);
     } finally {

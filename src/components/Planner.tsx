@@ -3,6 +3,7 @@ import { Check, FileDown, Save } from "lucide-react";
 import { cropLabel, defaultRequirement, type CropOption } from "../../shared/crops";
 import { rankCrops } from "../../shared/ranking";
 import { regionForLocation, groupForRegion, type RegionCrops } from "../../shared/regionCrops";
+import { waterForRegion, waterOutlook } from "../../shared/regionWater";
 import { REGION_PRESETS } from "../../shared/regions";
 import { evaluateCrop, type CropEvaluation } from "../../shared/seasons";
 import type { ClimateAnalysis } from "../../shared/types";
@@ -21,6 +22,7 @@ import { LocationPicker, type PickedLocation } from "./LocationPicker";
 import { Methods } from "./Methods";
 import { SavedReports } from "./SavedReports";
 import { SeasonsPanel } from "./SeasonsPanel";
+import { WaterPanel } from "./WaterPanel";
 
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
@@ -133,6 +135,8 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
     : null;
   const region = useMemo(() => (resultLoc ? regionForLocation(resultLoc) : null), [resultLoc?.lat, resultLoc?.lon, resultLoc?.presetId]);
   const placeName = resultLoc ? placeNameFor(resultLoc, region) : "";
+  const water = waterForRegion(region?.presetId);
+  const outlook = analysis ? waterOutlook(analysis, water) : null;
 
   const signature = analysis ? briefSignature(analysis, briefCrops) : null;
   const currentBrief = brief && brief.signature === signature ? brief.text : null;
@@ -358,6 +362,8 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
 
               <CropResults ranked={ranked} region={region} placeName={placeName} varietyFor={varietyFor} />
 
+              <WaterPanel water={water} outlook={outlook} period={analysis.future.period} placeName={placeName} />
+
               <AddCropForm
                 userCrops={userCrops}
                 status={status}
@@ -373,6 +379,16 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
                 analysis={analysis}
                 crops={briefCrops}
                 grownHere={region ? groupForRegion(ranked, region).grownToday.map((c) => c.label) : []}
+                water={
+                  outlook
+                    ? {
+                        orchardIrrigationMlPerHa: water?.orchards?.mlPerHa ?? null,
+                        shortfallChangeMm: Math.round(outlook.shortfallChangeMm),
+                        extraMlPerHa: Math.round(outlook.extraMlPerHa * 10) / 10,
+                        extraShareOfToday: outlook.shareOfOrchardUse != null ? Math.round(outlook.shareOfOrchardUse * 100) / 100 : null,
+                      }
+                    : null
+                }
                 aiEnabled={aiEnabled}
                 brief={brief}
                 onBrief={setBrief}

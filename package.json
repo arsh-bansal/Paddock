@@ -18,7 +18,8 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "clean": "rm -rf dist dist-server",
-    "import:abs": "tsx scripts/import-abs-region-crops.ts"
+    "import:abs": "tsx scripts/import-abs-region-crops.ts",
+    "import:abs-water": "tsx scripts/import-abs-water.ts"
   },
   "dependencies": {
     "@google/genai": "^2.25.0",

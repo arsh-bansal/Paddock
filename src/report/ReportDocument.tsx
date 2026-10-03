@@ -14,6 +14,8 @@ import type { CropEvaluation, SeasonVerdict } from "../../shared/seasons";
 import type { ClimateAnalysis } from "../../shared/types";
 import { adaptationNotes } from "../lib/adaptation";
 import { describeGrown, groupForRegion, grownFor, type RegionCrops } from "../../shared/regionCrops";
+import { waterForRegion, waterOutlook } from "../../shared/regionWater";
+import { districtComparison, outlookText, todayText, WATER_CAVEAT } from "../lib/waterText";
 import {
   changeTone,
   describeSeason,
@@ -329,6 +331,9 @@ export function ReportDocument({ analysis, crops, brief, region, placeName }: Re
     year: "numeric",
   });
   const groups = groupForRegion(sorted, region);
+  const districtWater = waterForRegion(region?.presetId);
+  const waterOut = waterOutlook(analysis, districtWater);
+  const waterToday = todayText(districtWater);
   const best = (region ? groups.grownToday : sorted).find((c) => c.overall === "viable");
   const anyIndicative = crops.some((c) => c.seasons.some((t) => t.indicative));
 
@@ -458,6 +463,30 @@ export function ReportDocument({ analysis, crops, brief, region, placeName }: Re
             {sorted.map((c) => <CropCardPdf key={c.id} c={c} />)}
           </>
         )}
+        {waterOut && (
+          <View wrap={false}>
+            <Text style={s.h2}>Water</Text>
+            {waterToday ? (
+              <Text style={s.p}>{waterToday}</Text>
+            ) : (
+              <Text style={[s.p, s.muted]}>
+                {districtWater
+                  ? `The ABS records too little irrigated orchard in ${districtWater.lga} for a reliable per-hectare figure.`
+                  : `No local irrigation figures for ${placeName}.`}
+              </Text>
+            )}
+            <Text style={[s.p, { marginTop: 4 }]}>{outlookText(waterOut, analysis.future.period)}</Text>
+            {waterToday && (
+              <Text style={s.small}>
+                {`Orchard irrigation by district, ML per irrigated hectare, 2020-21 (ABS): ${districtComparison()
+                  .map((c) => `${c.lga} ${c.mlPerHa.toLocaleString("en-AU", { maximumFractionDigits: 1 })}`)
+                  .join(", ")}.`}
+              </Text>
+            )}
+            <Text style={s.small}>{WATER_CAVEAT}</Text>
+          </View>
+        )}
+
         {anyIndicative && (
           <Text style={s.small}>
             * Indicative: the threshold was converted between chill measures or

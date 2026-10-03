@@ -22,6 +22,12 @@ export async function explainResult(
   analysis: ClimateAnalysis,
   crops: CropEvaluation[],
   grownHere: string[] = [],
+  water: {
+    orchardIrrigationMlPerHa: number | null;
+    shortfallChangeMm: number;
+    extraMlPerHa: number;
+    extraShareOfToday: number | null;
+  } | null = null,
 ): Promise<string> {
   const b = analysis.baseline.summary;
   const f = analysis.future.summary;
@@ -50,6 +56,15 @@ export async function explainResult(
     },
     climateModelsUsed: analysis.future.models.length,
     cropsGrownInThisDistrictToday: grownHere,
+    irrigation: water
+      ? {
+          orchardIrrigationTodayMlPerHectare: water.orchardIrrigationMlPerHa,
+          changeInYearlyEvaporationMinusRainMm: water.shortfallChangeMm,
+          roughExtraIrrigationMlPerHectare: water.extraMlPerHa,
+          roughExtraAsShareOfTodaysUse: water.extraShareOfToday,
+          note: 'Irrigation today is ABS 2020-21 data; the extra figure is a rough indication, not a crop water budget.',
+        }
+      : null,
     crops: crops.map((c) => ({
       crop: c.label,
       overall: c.overall,
@@ -78,7 +93,7 @@ export async function explainResult(
         'Use plain Australian English, as if talking to the grower over the fence. No headings, no bullet points, no markdown.',
         'Two short paragraphs, under 160 words total.',
         'Only use numbers that appear in the facts. Never invent figures, varieties, prices or sources. Skip any value that is null.',
-        'Paragraph 1: how the seasons are changing at this location: winter chill, spring frost, summer heat and water, in that order. Only mention the changes that matter most.',
+        'Paragraph 1: how the seasons are changing at this location: winter chill, spring frost, summer heat and water, in that order. Only mention the changes that matter most. If irrigation facts are given, say how much orchards irrigate today and roughly how that need could change, calling the change rough.',
         'Paragraph 2: what that means for the crops. If cropsGrownInThisDistrictToday is not empty, start with how those crops fare, then mention the best other option. Name the season that holds back any risky crop.',
         'End with one sentence saying these are model projections and the cultivar choice should be checked with their nursery or an Agriculture Victoria adviser.',
       ].join('\n'),
