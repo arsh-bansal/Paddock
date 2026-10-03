@@ -73,8 +73,9 @@ export function changeTone(r: SeasonRow): 'good' | 'bad' | 'neutral' {
 
 export const SEASON_LABEL = { winter: 'Winter chill', spring: 'Spring frost', summer: 'Summer heat' } as const;
 
-/** "needs about 52 chill portions (about 750 chill hours)" */
-export function requirementText(c: { chillPortionsRequirement: number; chillRequirement: number; portionsConverted: boolean }): string {
+/** "needs about 52 chill portions (about 750 chill hours)", or a note when winter isn't scored. */
+export function requirementText(c: { chillPortionsRequirement: number | null; chillRequirement: number | null; portionsConverted: boolean }): string {
+  if (c.chillPortionsRequirement == null || c.chillRequirement == null) return 'winter chill not scored for this crop';
   return `needs about ${Math.round(c.chillPortionsRequirement)} chill portions (about ${Math.round(c.chillRequirement).toLocaleString('en-AU')} chill hours)`;
 }
 
@@ -84,6 +85,9 @@ export function describeSeason(s: { season: 'winter' | 'spring' | 'summer'; verd
   if (s.season === 'summer' && s.verdict === 'no-data' && s.future != null) {
     const b = s.baseline == null ? '' : ` (was ${Math.round(s.baseline)})`;
     return `About ${Math.round(s.future)} days of 35 °C or hotter in a typical summer${b}. Not scored yet: no published heat limit for this crop.`;
+  }
+  if (s.season === 'winter' && s.verdict === 'no-data' && s.threshold == null) {
+    return 'Not scored: we have no chill figure for this crop that fits our winter-chill model.';
   }
   if (s.verdict === 'no-data' || s.future == null) return 'No crop data yet for this season.';
   const f = Math.round(s.future);

@@ -176,7 +176,9 @@ function ChillChart({
   const obs = analysis.observed.flatMap((y) =>
     y.winter ? [[y.year, y.winter.chillPortions] as const] : [],
   );
-  const reqs = crops.map((c) => c.chillPortionsRequirement);
+  // Crops whose winter isn't scored have no chill line to draw.
+  const lined = crops.filter((c): c is CropEvaluation & { chillPortionsRequirement: number } => c.chillPortionsRequirement != null);
+  const reqs = lined.map((c) => c.chillPortionsRequirement);
   const raw = Math.max(chill.p90, ...reqs, ...obs.map(([, v]) => v)) * 1.08;
   const step =
     [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find((st) => raw / st <= 5) ?? 1000;
@@ -249,7 +251,7 @@ function ChillChart({
         strokeWidth={1.2}
         strokeDasharray="4 3"
       />
-      {crops.map((c) => {
+      {lined.map((c) => {
         const v = c.seasons.find((t) => t.season === "winter")!.verdict;
         return (
           <Line

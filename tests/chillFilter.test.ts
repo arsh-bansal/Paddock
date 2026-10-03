@@ -17,7 +17,7 @@ function crop(id: string, chill: [number, number]): CropOption {
     crop: id,
     type: 'Standard varieties',
     category: 'stone fruit',
-    winter: { indicative: false, source: '', chillHours: chill, chillPortions: chill, portionsDerived: false, portionsSource: '' },
+    winter: { indicative: false, source: '', chillHours: chill, hoursDerived: false, chillPortions: chill, portionsDerived: false, portionsSource: '' },
     spring: null,
     summer: null,
     heatNote: 'n/a',
@@ -150,15 +150,19 @@ describe('over the real catalogue (scored in chill portions)', () => {
     expect(kept).toEqual(CROP_OPTIONS.map((c) => c.id));
   });
 
-  it('a warm block (future median 45 portions) suits only the low-chill classes', () => {
+  it('a warm block (future median 45 portions) suits only the low-chill crops, plus crops chill can’t rule out', () => {
     const kept = filterAppropriateByChill(CROP_OPTIONS, 45).map((c) => c.id);
-    expect(kept).toEqual(['peach-standard', 'peach-low', 'apricot', 'plum-japanese', 'apple-low']);
+    // Low-chill classes (needs at or under 45 portions) and grapes (winter not scored).
+    expect(kept).toEqual(['peach-standard', 'peach-low', 'apricot', 'plum-japanese', 'apple-low', 'almond', 'blueberry-southern', 'grape']);
   });
 
   it('partition never drops a crop: suited + struggling is the whole list', () => {
     const { suited, struggling } = partitionByChill(CROP_OPTIONS, 45);
     expect(suited.length + struggling.length).toBe(CROP_OPTIONS.length);
-    expect(struggling.map((c) => c.id)).toEqual(['plum-european', 'cherry-standard', 'cherry-low', 'apple-mainstream', 'pear']);
+    // Walnut needs 46 portions, just over the 45 available.
+    expect(struggling.map((c) => c.id)).toEqual([
+      'plum-european', 'cherry-standard', 'cherry-low', 'apple-mainstream', 'pear', 'pistachio', 'walnut', 'blueberry-northern',
+    ]);
   });
 
   it('partition puts everything in suited when chill is unavailable', () => {

@@ -7,11 +7,30 @@
       "indicative": true,
       "source": "",
       "grownToday": [
-        { "cropId": "pear", "name": "Pears" },
-        { "cropId": "apple-mainstream", "name": "Apples" },
-        { "cropId": "peach-standard", "name": "Peaches and nectarines" },
-        { "cropId": "apricot", "name": "Apricots" },
-        { "cropId": "plum-japanese", "name": "Plums" }
+        {
+          "cropId": "pear",
+          "name": "Pears"
+        },
+        {
+          "cropId": "apple-mainstream",
+          "name": "Apples"
+        },
+        {
+          "cropId": "peach-standard",
+          "name": "Peaches and nectarines"
+        },
+        {
+          "cropId": "apricot",
+          "name": "Apricots"
+        },
+        {
+          "cropId": "plum-japanese",
+          "name": "Plums"
+        },
+        {
+          "cropId": "almond",
+          "name": "Almonds (new plantings)"
+        }
       ]
     },
     {
@@ -20,9 +39,18 @@
       "indicative": true,
       "source": "",
       "grownToday": [
-        { "cropId": "peach-standard", "name": "Peaches and nectarines" },
-        { "cropId": "apricot", "name": "Apricots" },
-        { "cropId": "plum-japanese", "name": "Plums" }
+        {
+          "cropId": "peach-standard",
+          "name": "Peaches and nectarines"
+        },
+        {
+          "cropId": "apricot",
+          "name": "Apricots"
+        },
+        {
+          "cropId": "plum-japanese",
+          "name": "Plums"
+        }
       ]
     },
     {
@@ -31,10 +59,22 @@
       "indicative": true,
       "source": "",
       "grownToday": [
-        { "cropId": "apple-mainstream", "name": "Apples" },
-        { "cropId": "pear", "name": "Pears" },
-        { "cropId": "cherry-standard", "name": "Cherries" },
-        { "cropId": null, "name": "Wine grapes" }
+        {
+          "cropId": "apple-mainstream",
+          "name": "Apples"
+        },
+        {
+          "cropId": "pear",
+          "name": "Pears"
+        },
+        {
+          "cropId": "cherry-standard",
+          "name": "Cherries"
+        },
+        {
+          "cropId": "grape",
+          "name": "Wine grapes"
+        }
       ]
     },
     {
@@ -43,10 +83,22 @@
       "indicative": true,
       "source": "",
       "grownToday": [
-        { "cropId": "cherry-standard", "name": "Cherries" },
-        { "cropId": "apple-mainstream", "name": "Apples" },
-        { "cropId": null, "name": "Berries" },
-        { "cropId": null, "name": "Wine grapes" }
+        {
+          "cropId": "cherry-standard",
+          "name": "Cherries"
+        },
+        {
+          "cropId": "apple-mainstream",
+          "name": "Apples"
+        },
+        {
+          "cropId": null,
+          "name": "Berries"
+        },
+        {
+          "cropId": "grape",
+          "name": "Wine grapes"
+        }
       ]
     },
     {
@@ -55,8 +107,14 @@
       "indicative": true,
       "source": "",
       "grownToday": [
-        { "cropId": "apple-mainstream", "name": "Apples" },
-        { "cropId": "pear", "name": "Pears" }
+        {
+          "cropId": "apple-mainstream",
+          "name": "Apples"
+        },
+        {
+          "cropId": "pear",
+          "name": "Pears"
+        }
       ]
     },
     {
@@ -65,10 +123,22 @@
       "indicative": true,
       "source": "",
       "grownToday": [
-        { "cropId": "peach-standard", "name": "Peaches and nectarines" },
-        { "cropId": null, "name": "Almonds" },
-        { "cropId": null, "name": "Table grapes" },
-        { "cropId": null, "name": "Olives" }
+        {
+          "cropId": "peach-standard",
+          "name": "Peaches and nectarines"
+        },
+        {
+          "cropId": "almond",
+          "name": "Almonds"
+        },
+        {
+          "cropId": "grape",
+          "name": "Table grapes"
+        },
+        {
+          "cropId": null,
+          "name": "Olives"
+        }
       ]
     }
   ]

@@ -201,10 +201,10 @@ export interface CropEvaluation {
   overall: SeasonVerdict;
   seasons: SeasonResult[];
   heatNote: string;
-  /** Chill hours shown to the grower (crop default or their own figure) */
-  chillRequirement: number;
-  /** Chill portions actually scored against (Dynamic Model) */
-  chillPortionsRequirement: number;
+  /** Chill hours shown to the grower (crop default or their own figure); null when winter isn't scored */
+  chillRequirement: number | null;
+  /** Chill portions actually scored against (Dynamic Model); null when winter isn't scored */
+  chillPortionsRequirement: number | null;
   /** True when the portions requirement was converted from hours rather than sourced directly */
   portionsConverted: boolean;
 }
@@ -311,18 +311,31 @@ export function evaluateCrop(
   futureYears: YearStat[],
   opts: EvaluateOptions = {},
 ): CropEvaluation {
+  const winterReq = crop.winter;
+  const spring = evaluateSpring(baseYears, futureYears, crop);
+  const summer = evaluateSummer(baseYears, futureYears, crop);
+
+  // No chill figure that fits our model (e.g. grapevines): winter is reported as not scored and
+  // the verdict comes from the other seasons.
+  if (!winterReq) {
+    const winter: SeasonResult = { season: 'winter', verdict: 'no-data', baseline: null, future: null, threshold: null, indicative: false };
+    const seasons = [winter, spring, summer];
+    return {
+      id: crop.id, label, overall: overallVerdict(seasons), seasons, heatNote: crop.heatNote,
+      chillRequirement: null, chillPortionsRequirement: null, portionsConverted: false,
+    };
+  }
+
   const override = opts.chillHoursOverride;
   const hasOverride = override != null && Number.isFinite(override);
-  const chillRequirement = hasOverride
-    ? override
-    : Math.round((crop.winter.chillHours[0] + crop.winter.chillHours[1]) / 2);
-  const portions = hasOverride ? Math.round(hoursToPortions(override) * 10) / 10 : defaultPortions(crop);
-  const portionsConverted = hasOverride || crop.winter.portionsDerived;
+  const chillRequirement = hasOverride ? override : Math.round((winterReq.chillHours[0] + winterReq.chillHours[1]) / 2);
+  const portions = hasOverride ? Math.round(hoursToPortions(override) * 10) / 10 : defaultPortions(crop)!;
+  const portionsConverted = hasOverride || winterReq.portionsDerived;
 
   const seasons = [
-    evaluateWinter(baseYears, futureYears, portions, crop.winter.indicative || portionsConverted),
-    evaluateSpring(baseYears, futureYears, crop),
-    evaluateSummer(baseYears, futureYears, crop),
+    evaluateWinter(baseYears, futureYears, portions, winterReq.indicative || portionsConverted),
+    spring,
+    summer,
   ];
   return {
     id: crop.id,

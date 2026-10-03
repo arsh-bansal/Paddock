@@ -109,7 +109,12 @@
         1323
       ],
       "indicative": true,
-      "source": "Fadon et al. 2020 (CH 0-7.2C basis), via figure caption/snippet - non-AU, needs human verification"
+      "source": "Fadon et al. 2020 (CH 0-7.2C basis), via figure caption/snippet - non-AU, needs human verification",
+      "chillPortions": [
+        55,
+        60
+      ],
+      "portionsSource": "Pope (compiler), Fruit & Nut Crop Chill Portions Requirements, UC Cooperative Extension, fruitsandnuts.ucanr.edu: prune 'Improved French' 55-60 chill portions (Central Valley estimate). Replaces the earlier figure converted from hours"
     },
     "spring": {
       "floweringMonths": [
@@ -252,6 +257,135 @@
       "frostDamageC": -2.2,
       "indicative": true,
       "source": "Murray (2020), Critical Temperatures for Frost Damage on Fruit Trees, USU Extension IPM-012-11 (WSU table): full bloom, 10% kill, 28 F = -2.2 C. US source; district-level frost estimate"
+    },
+    "summer": null
+  },
+  {
+    "id": "almond",
+    "crop": "Almond",
+    "type": "Standard varieties",
+    "category": "nut",
+    "heatNote": "Flowers very early, so spring frost is the main climate risk; later-flowering varieties are recommended for frost-prone sites.",
+    "winter": {
+      "chillPortions": [
+        22,
+        32
+      ],
+      "indicative": false,
+      "source": "Chill hours shown are converted from the chill-portion figures",
+      "portionsSource": "Pope (compiler), Fruit & Nut Crop Chill Portions Requirements, UC Cooperative Extension, fruitsandnuts.ucanr.edu: Nonpareil 22-23, Desmayo Largueta 28, Ferragnes 32 chill portions (Ramirez et al. 2010; Pope et al. 2014)"
+    },
+    "spring": {
+      "floweringMonths": [
+        8
+      ],
+      "frostDamageC": -2.2,
+      "indicative": true,
+      "source": "Bloom late July to early September in Australia (Queensland Government almond crop summary; August pollination per Almond Board of Australia). Crop loss at or below 27-28 F (-2.8 to -2.2 C) at full bloom (UC farm advisor, The Almond Doctor, 2018). District-level frost estimate"
+    },
+    "summer": null
+  },
+  {
+    "id": "pistachio",
+    "crop": "Pistachio",
+    "type": "Standard varieties",
+    "category": "nut",
+    "heatNote": "Needs a lot of winter chill despite liking hot summers, so warm winters are its main climate risk.",
+    "winter": {
+      "chillPortions": [
+        54,
+        60
+      ],
+      "indicative": false,
+      "source": "Chill hours shown are converted from the chill-portion figures",
+      "portionsSource": "Pope (compiler), Fruit & Nut Crop Chill Portions Requirements, UC Cooperative Extension, fruitsandnuts.ucanr.edu: Kerman 54-58, Peters 58-65 chill portions; Sirora 60 (Zhang & Taylor 2011, HortScience, a study of Sirora pistachio in Australia)"
+    },
+    "spring": null,
+    "summer": null
+  },
+  {
+    "id": "walnut",
+    "crop": "Walnut",
+    "type": "Standard varieties",
+    "category": "nut",
+    "heatNote": "No sourced heat figures yet for this crop.",
+    "winter": {
+      "chillPortions": [
+        38,
+        54
+      ],
+      "indicative": false,
+      "source": "Chill hours shown are converted from the chill-portion figures",
+      "portionsSource": "Pope (compiler), Fruit & Nut Crop Chill Portions Requirements, UC Cooperative Extension, fruitsandnuts.ucanr.edu: Payne 38, Chandler 45-50, Hartley 54 chill portions (Luedeling et al. 2009, 2013)"
+    },
+    "spring": null,
+    "summer": null
+  },
+  {
+    "id": "blueberry-southern",
+    "crop": "Blueberry",
+    "type": "Southern highbush varieties",
+    "category": "berry",
+    "heatNote": "Frost tender and mostly evergreen; suited to warmer, drier sites than northern highbush.",
+    "winter": {
+      "chillHours": [
+        250,
+        600
+      ],
+      "indicative": false,
+      "source": "WA Department of Primary Industries and Regional Development, Growing blueberries in Western Australia: southern highbush need 250-600 chilling hours below 7 C"
+    },
+    "spring": {
+      "floweringMonths": [
+        9,
+        10
+      ],
+      "frostDamageC": -2.2,
+      "indicative": true,
+      "source": "Full bloom tolerates 28 F (-2.2 C): Michigan State University Extension, critical spring temperatures for blueberries. Flowering around September for highbush in Victoria (Clayton-Greene & Goubran 1987, Fruit Varieties Journal); October added for later varieties. District-level frost estimate"
+    },
+    "summer": null
+  },
+  {
+    "id": "blueberry-northern",
+    "crop": "Blueberry",
+    "type": "Northern highbush varieties",
+    "category": "berry",
+    "heatNote": "Frost tolerant and suited to cooler southern regions such as Victoria.",
+    "winter": {
+      "chillHours": [
+        800,
+        1000
+      ],
+      "indicative": false,
+      "source": "More than 800 chilling hours below 7 C (WA DPIRD; Oregon State University Extension PNW 656). Upper bound 1000 h: University of Georgia cultivar notes (northern highbush at least 1000 h unless noted)"
+    },
+    "spring": {
+      "floweringMonths": [
+        9,
+        10
+      ],
+      "frostDamageC": -2.2,
+      "indicative": true,
+      "source": "Full bloom tolerates 28 F (-2.2 C): Michigan State University Extension, critical spring temperatures for blueberries. Flowering around September for highbush in Victoria (Clayton-Greene & Goubran 1987, Fruit Varieties Journal); October added for later varieties. District-level frost estimate"
+    },
+    "summer": null
+  },
+  {
+    "id": "grape",
+    "crop": "Grapes",
+    "type": "Wine and table",
+    "category": "vine",
+    "heatNote": "Budburst timing drives frost risk: warmer late winters bring budburst, and exposure to frost, earlier.",
+    "winter": null,
+    "spring": {
+      "floweringMonths": [
+        9,
+        10
+      ],
+      "frostDamageC": -1.1,
+      "indicative": true,
+      "source": "AWRI frost fact sheet (2017): shoots suffer 50% loss at -2.2 C at budburst and -1.1 C by the 4th-leaf stage (Gardea 1987). Damaging frosts from September to late October in Goulburn and Yarra Valley vineyards (Wine Australia final report RT 06/04-1). Scored on the 4th-leaf figure. District-level frost estimate"
     },
     "summer": null
   }

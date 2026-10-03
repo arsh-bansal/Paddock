@@ -175,7 +175,8 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
 
   const varietyFor = (c: CropEvaluation): VarietyControl | undefined => {
     const crop = combined.find((x) => x.id === c.id);
-    if (!crop) return undefined;
+    // No winter requirement (e.g. grapevines): there's no chill figure to adjust.
+    if (!crop || !crop.winter) return undefined;
     const defaultHours = defaultRequirement(crop);
     return {
       hours: options[c.id]?.requirement ?? defaultHours,

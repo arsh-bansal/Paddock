@@ -88,7 +88,7 @@ export function AddCropForm({ userCrops, status, loadError, onAdd, onEdit, onDel
     setEditingId(c.id);
     setName(c.crop);
     // Stored as a tight range [v, v]; show the single value the grower typed.
-    setChill(String(c.winter.chillHours[0]));
+    setChill(String(c.winter?.chillHours[0] ?? ""));
     setError(null);
     nameRef.current?.focus();
   };
@@ -197,7 +197,7 @@ export function AddCropForm({ userCrops, status, loadError, onAdd, onEdit, onDel
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-bold">{c.crop}</span>
                   <YourFiguresBadge />
-                  <span className="text-sm text-muted">{c.winter.chillHours[0]} chill hours</span>
+                  <span className="text-sm text-muted">{c.winter?.chillHours[0] ?? 0} chill hours</span>
                 </span>
                 <span className="flex items-center gap-2">
                   <button

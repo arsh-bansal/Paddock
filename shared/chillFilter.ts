@@ -12,14 +12,19 @@
  */
 import type { CropOption } from './crops';
 
-/** Un-rounded midpoint of a crop's chill-portions range. A user crop `[v, v]` gives exactly `v`. */
-export function chillPortionsMidpoint(crop: CropOption): number {
-  return (crop.winter.chillPortions[0] + crop.winter.chillPortions[1]) / 2;
+/**
+ * Un-rounded midpoint of a crop's chill-portions range. A user crop `[v, v]` gives exactly `v`.
+ * null for crops whose winter isn't scored.
+ */
+export function chillPortionsMidpoint(crop: CropOption): number | null {
+  return crop.winter ? (crop.winter.chillPortions[0] + crop.winter.chillPortions[1]) / 2 : null;
 }
 
 export function isAppropriateByChill(crop: CropOption, futureMedianChillPortions: number): boolean {
   if (!Number.isFinite(futureMedianChillPortions)) return true; // unavailable -> keep all
-  return futureMedianChillPortions >= chillPortionsMidpoint(crop);
+  const need = chillPortionsMidpoint(crop);
+  if (need == null) return true; // chill isn't scored for this crop, so chill can't rule it out
+  return futureMedianChillPortions >= need;
 }
 
 export function filterAppropriateByChill(crops: CropOption[], futureMedianChillPortions: number): CropOption[] {

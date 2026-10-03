@@ -23,9 +23,11 @@ export function ChillChart({ analysis, crops }: Props) {
   const { future } = analysis;
   const chill = future.summary.chillPortions;
   const baseChill = analysis.baseline.summary.chillPortions;
-  const options = crops.map((c) => {
+  // Crops whose winter isn't scored have no chill line to draw.
+  const options = crops.flatMap((c) => {
+    if (c.chillPortionsRequirement == null) return [];
     const winter = c.seasons.find((s) => s.season === 'winter')!;
-    return { id: c.id, label: c.label, requirement: c.chillPortionsRequirement, verdict: winter.verdict };
+    return [{ id: c.id, label: c.label, requirement: c.chillPortionsRequirement, verdict: winter.verdict }];
   });
   const rows: Row[] = [];
   const obs = new Map(analysis.observed.flatMap((s) => (s.winter ? [[s.year, s.winter.chillPortions] as const] : [])));
