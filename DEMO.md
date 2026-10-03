@@ -5,7 +5,8 @@
 - [ ] **Run `npm run snapshot` on good wifi** and commit `data/cache/`. The demo then works with no internet.
 - [ ] **Sanity-check the Shepparton numbers.** Typical winter chill should look plausible against published Goulburn Valley figures. If it's wildly off, tell the team before the judges do.
 - [ ] **Replace the placeholder "grown here today" lists** in `shared/regionCrops.data.json` with ABS Agricultural Census data per district (see `docs/regional-crops.md`). The app labels them preliminary until then.
-- [ ] **Add the big local crops we can't score yet** (almonds, grapes, olives, berries) to `shared/crops.data.json` with sourced thresholds, so different districts give different answers.
+- [x] Almonds, pistachios, walnuts, blueberries and grapes added with sourced thresholds (olives stay unscored; see `docs/crop-data-sources.md`).
+- [ ] **Know the headline finding before you pitch it:** on winter chill and spring frost, every crop still fits all six Victorian districts through 2045. The districts differ on heat and water, which aren't scored per crop yet. Say that plainly; it's a real result.
 - [ ] **Replace converted chill-portion figures** with direct ones where a source exists (`docs/crop-data-sources.md`).
 - [ ] **Get one real grower or adviser quote.** Message a Goulburn Valley grower, Fruit Growers Victoria, or an Agriculture Victoria horticulture officer. One line like "we're replanting next year and have no idea what chill to plan for" beats any slide.
 - [ ] **Confirm Climathon's rules on prior work.** This is a rebuild of a June prototype; be upfront about what's new.

@@ -359,3 +359,41 @@ but stay `indicative`, and the app labels frost as a district estimate that unde
 **Still to source:** direct chill-portion requirements for the non-cherry crops (Fadón et al. 2020
 reports several models; Australian stone-fruit and pome work by Darbyshire et al.), and any credible
 heat-tolerance figure.
+
+---
+
+## New crops (October 2026)
+
+Added so districts that grow nuts, grapes and berries can be scored. Every figure below is in
+`shared/crops.data.json` with its source string.
+
+| Crop | Winter (scored) | Spring frost | Sources |
+|---|---|---|---|
+| Almond | 22–32 chill portions, **direct**; hours shown (≈320–420 h) are converted | August bloom, −2.2 °C, indicative | UC Cooperative Extension chill-portion table (Pope; Ramirez et al. 2010; Pope et al. 2014). Bloom late July–early Sept (Qld Government almond crop summary; August pollination per Almond Board of Australia). Crop loss at 27–28 °F at full bloom (UC farm advisor, The Almond Doctor 2018) |
+| Pistachio | 54–60 chill portions, **direct** | not sourced (null) | UC table: Kerman 54–58, Peters 58–65; Sirora 60 (Zhang & Taylor 2011, HortScience, Australian study) |
+| Walnut | 38–54 chill portions, **direct** | not sourced (null) | UC table: Payne 38, Chandler 45–50, Hartley 54 (Luedeling et al. 2009, 2013) |
+| Blueberry, southern highbush | 250–600 h, converted to portions | Sept–Oct, −2.2 °C, indicative | WA DPIRD, *Growing blueberries in Western Australia*. Frost: Michigan State University Extension critical spring temperatures. Victorian flowering: Clayton-Greene & Goubran (1987) |
+| Blueberry, northern highbush | 800–1000 h, converted | Sept–Oct, −2.2 °C, indicative | WA DPIRD and Oregon State Extension PNW 656 (>800 h); upper bound from University of Georgia cultivar notes |
+| Grapes (wine and table) | **not scored** (`winter: null`) | Sept–Oct, −1.1 °C, indicative | AWRI frost fact sheet (−2.2 °C at budburst, −1.1 °C by 4th leaf; Gardea 1987). Frost season Sept–late Oct in Goulburn and Yarra Valleys (Wine Australia final report RT 06/04-1) |
+| European plum (updated) | 55–60 chill portions, **direct** (was converted) | unchanged | UC table: prune 'Improved French' 55–60 |
+
+**Why grapes have no winter score.** Grapevines have a modest chill requirement but no chill figure
+we found fits our Dynamic Model scoring, and the industry sources treat spring frost after budburst
+as the key climate risk. `winter: null` makes the app report winter as "not scored" and judge the
+crop on frost; the chill filter never rules it out.
+
+**Why olives aren't in the database.** Olive flowering depends on winter cold through a different
+process (vernalisation over roughly 5–12 °C, per the International Olive Council catalogue), and we
+found no chill-portion figure or flower frost threshold to source. They stay listed by name as
+"grown here, not yet scored".
+
+**Pistachio and walnut have no spring entry** because we found no sourced flowering-frost figure
+for them in Australian conditions; their spring season shows "no data" rather than a guess.
+
+### What the real data says with these crops
+
+With winter scored in chill portions, every crop in the database is a good fit at all six preset
+districts through 2045 (Swan Hill's poor-winter chill is still ~66 portions). Spring frost from the
+grid rarely flags anything because the grid undercounts cold nights. The climate differences that
+do separate these districts (Swan Hill has ~4× Wandin's hot days and a third of its rainfall) sit
+in summer heat and water, which can't be scored per crop until heat limits are sourced.

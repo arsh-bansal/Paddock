@@ -32,8 +32,16 @@ that don't exist fail loudly (tests in `tests/regionCrops.test.ts`).
 2. Add its entry to `shared/regionCrops.data.json`.
 3. Run `npm run snapshot` to cache its climate data for offline demos.
 
-## Biggest win from here
+## ABS data: which file
 
-Much of what's grown at Swan Hill (almonds, table grapes, olives) and in the Yarra Valley (berries,
-wine grapes) isn't in the crop database yet, so it's listed but not scored. Adding those crops with
-sourced thresholds is what makes "best crops for this area" differ from district to district.
+The ABS **Agricultural Commodities, Australia, 2020–21** release has a **Local Government Area**
+data cube (`AGCDCLGA202021.xlsx`), which maps cleanly onto the preset districts. The ABS says the
+2020–21 Agricultural Census was the last one it will run, so this is the newest regional data there
+will be. The file is a spreadsheet the app's tooling can't fetch directly: download it from the ABS
+release page. An importer that turns it into `regionCrops.data.json` is the next step (it needs the real file to check the sheet layout).
+
+## Crops in the lists
+
+Almonds and grapes are now in the crop database and scored. Olives and the Yarra Valley's berries
+(mostly strawberries and raspberries) are listed by name but not scored; see
+`docs/crop-data-sources.md` for why olives aren't in the database.
