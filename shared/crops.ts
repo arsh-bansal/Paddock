@@ -69,6 +69,11 @@ export interface CropOption {
     | null;
   /** Plain-language heat risk, shown with results */
   heatNote: string;
+  /**
+   * Years from planting to the first worthwhile crop and to full production, [earliest, latest].
+   * fullCropYears null when no source gives it. Absent for user-added crops.
+   */
+  bearing?: (Sourced & { firstCropYears: [number, number]; fullCropYears: [number, number] | null }) | null;
 }
 
 /**
@@ -121,6 +126,20 @@ const cropSchema = z.object({
       ]),
     })
     .nullable(),
+  bearing: sourced
+    .extend({
+      firstCropYears: z
+        .tuple([z.number().int().min(1).max(20), z.number().int().min(1).max(20)])
+        .refine(([lo, hi]) => lo <= hi, 'firstCropYears must be [min, max]'),
+      fullCropYears: z
+        .tuple([z.number().int().min(1).max(30), z.number().int().min(1).max(30)])
+        .refine(([lo, hi]) => lo <= hi, 'fullCropYears must be [min, max]')
+        .nullable(),
+    })
+    .refine((b) => !b.fullCropYears || b.fullCropYears[0] >= b.firstCropYears[0], 'full crop can’t come before first crop')
+    .refine((b) => b.source.trim().length > 0, 'bearing needs a source')
+    .nullable()
+    .optional(),
 });
 
 const cropsSchema = z

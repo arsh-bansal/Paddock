@@ -3,6 +3,8 @@ import { hoursToPortions } from '../../shared/chillConversion';
 import { describeGrown, groupForRegion, grownFor, type GrownItem, type RegionCrops } from '../../shared/regionCrops';
 import type { CropEvaluation, SeasonVerdict } from '../../shared/seasons';
 import { describeSeason, requirementText, SEASON_LABEL } from '../lib/seasonRows';
+import { timelineText } from '../lib/moneyText';
+import { MoneyPanel, type FinanceControl } from './MoneyPanel';
 
 /*
  * Results for a location: what the district grows today (and how it fares), what else could suit,
@@ -84,7 +86,9 @@ function localText(items: GrownItem[]): string | null {
   return parts.length ? `Grown here: ${parts.join('; ')}.` : null;
 }
 
-export function CropCard({ c, rank, variety, local }: { c: CropEvaluation; rank?: number; variety?: VarietyControl; local?: GrownItem[] }) {
+export function CropCard({ c, rank, variety, local, finance }: {
+  c: CropEvaluation; rank?: number; variety?: VarietyControl; local?: GrownItem[]; finance?: FinanceControl;
+}) {
   const localLine = local ? localText(local) : null;
   return (
     <li id={`crop-${c.id}`} className="scroll-mt-24 rounded-xl border border-line bg-card p-4">
@@ -97,6 +101,7 @@ export function CropCard({ c, rank, variety, local }: { c: CropEvaluation; rank?
             <p className="font-bold">{c.label}</p>
             <p className="text-sm text-muted">{requirementText(c)}{c.portionsConverted ? ', converted from hours' : ''}</p>
             {localLine && <p className="text-sm font-bold text-leaf">{localLine}</p>}
+            {finance?.timeline && <p className="text-sm">{timelineText(finance.timeline)}</p>}
           </div>
         </div>
         <span className={`rounded-full px-3 py-1 text-sm font-bold ${VERDICT_UI[c.overall].chip}`}>{VERDICT_UI[c.overall].label}</span>
@@ -115,6 +120,7 @@ export function CropCard({ c, rank, variety, local }: { c: CropEvaluation; rank?
       </ul>
       <p className="mt-2 text-sm text-muted"><span className="font-bold text-sun-ink">Heat risk.</span> {c.heatNote}</p>
       {variety && <VarietyAdjust cropId={c.id} label={c.label} v={variety} />}
+      {finance && <MoneyPanel label={c.label} f={finance} />}
     </li>
   );
 }
@@ -131,9 +137,10 @@ function Section({ id, title, blurb, children }: { id: string; title: string; bl
   );
 }
 
-function CardList({ crops, varietyFor, region, ranked = true }: {
+function CardList({ crops, varietyFor, financeFor, region, ranked = true }: {
   crops: CropEvaluation[];
   varietyFor: (c: CropEvaluation) => VarietyControl | undefined;
+  financeFor?: (c: CropEvaluation) => FinanceControl | undefined;
   /** When given, each card shows the district's ABS figures for that crop */
   region?: RegionCrops | null;
   /** Show rank numbers (off when the list isn't in climate-fit order) */
@@ -142,7 +149,8 @@ function CardList({ crops, varietyFor, region, ranked = true }: {
   return (
     <ul className="space-y-3">
       {crops.map((c, i) => (
-        <CropCard key={c.id} c={c} rank={ranked ? i + 1 : undefined} variety={varietyFor(c)} local={region ? grownFor(region, c.id) : undefined} />
+        <CropCard key={c.id} c={c} rank={ranked ? i + 1 : undefined} variety={varietyFor(c)} finance={financeFor?.(c)}
+          local={region ? grownFor(region, c.id) : undefined} />
       ))}
     </ul>
   );
@@ -162,9 +170,10 @@ interface Props {
   /** Short place name for headings, e.g. "Shepparton" */
   placeName: string;
   varietyFor: (c: CropEvaluation) => VarietyControl | undefined;
+  financeFor?: (c: CropEvaluation) => FinanceControl | undefined;
 }
 
-export function CropResults({ ranked, region, placeName, varietyFor }: Props) {
+export function CropResults({ ranked, region, placeName, varietyFor, financeFor }: Props) {
   if (ranked.length === 0) return null;
   const g = groupForRegion(ranked, region);
   const anyIndicative = ranked.some((c) => c.seasons.some((s) => s.indicative && s.verdict !== 'no-data'));
@@ -187,7 +196,7 @@ export function CropResults({ ranked, region, placeName, varietyFor }: Props) {
               return items.length ? (
                 <div key={verdict} className="space-y-2">
                   <h4 className="font-display text-lg font-bold">{title} <span className="text-muted">({items.length})</span></h4>
-                  <CardList crops={items} varietyFor={varietyFor} />
+                  <CardList crops={items} varietyFor={varietyFor} financeFor={financeFor} />
                 </div>
               ) : null;
             })}
@@ -215,7 +224,7 @@ export function CropResults({ ranked, region, placeName, varietyFor }: Props) {
           </>
         }>
         {g.grownToday.length > 0 ? (
-          <CardList crops={g.grownToday} varietyFor={varietyFor} region={region} ranked={false} />
+          <CardList crops={g.grownToday} varietyFor={varietyFor} financeFor={financeFor} region={region} ranked={false} />
         ) : region.grownToday.length === 0 && region.note ? (
           <p className="rounded-lg bg-sun-soft px-4 py-3 text-sun-ink">{region.note}</p>
         ) : (
@@ -240,7 +249,7 @@ export function CropResults({ ranked, region, placeName, varietyFor }: Props) {
       <Section id="results-could" title="Could also suit this area"
         blurb="Crops not commonly grown here whose climate fit still works through 2045, best fit first.">
         {g.couldSuit.length > 0 ? (
-          <CardList crops={g.couldSuit} varietyFor={varietyFor} />
+          <CardList crops={g.couldSuit} varietyFor={varietyFor} financeFor={financeFor} />
         ) : (
           <p className="rounded-lg bg-paper px-4 py-3 text-muted">No other crop in our database is a good or risky fit here.</p>
         )}
@@ -253,7 +262,7 @@ export function CropResults({ ranked, region, placeName, varietyFor }: Props) {
             <span className="block text-sm text-muted">Crops a typical future year here doesn’t suit, with the reason.</span>
           </summary>
           <div className="border-t border-line p-4">
-            <CardList crops={g.struggles} varietyFor={varietyFor} />
+            <CardList crops={g.struggles} varietyFor={varietyFor} financeFor={financeFor} />
           </div>
         </details>
       )}

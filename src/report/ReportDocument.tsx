@@ -15,6 +15,7 @@ import type { ClimateAnalysis } from "../../shared/types";
 import { adaptationNotes } from "../lib/adaptation";
 import { describeGrown, groupForRegion, grownFor, type RegionCrops } from "../../shared/regionCrops";
 import { waterForRegion, waterOutlook } from "../../shared/regionWater";
+import type { CropNotes } from "../lib/moneyText";
 import { districtComparison, outlookText, todayText, WATER_CAVEAT } from "../lib/waterText";
 import { axisFor, SEASON_METRICS, seriesFor, seriesLine, type SeasonSeries } from "../lib/seasonSeries";
 import {
@@ -42,6 +43,8 @@ export interface ReportInput {
   region: RegionCrops | null;
   /** Short place name for headings, e.g. "Shepparton" */
   placeName: string;
+  /** Per-crop timeline and money lines (see cropNotes in src/lib/moneyText.ts) */
+  notes?: Record<string, CropNotes>;
 }
 
 const C = {
@@ -223,7 +226,7 @@ function SeasonChartPdf({
 }
 
 /** One crop's result card (overall verdict + the three seasons). */
-function CropCardPdf({ c, local }: { c: CropEvaluation; local?: string | null }) {
+function CropCardPdf({ c, local, note }: { c: CropEvaluation; local?: string | null; note?: CropNotes }) {
   return (
     <View style={s.card} wrap={false}>
             <View style={s.cardHead}>
@@ -243,6 +246,7 @@ function CropCardPdf({ c, local }: { c: CropEvaluation; local?: string | null })
               </Text>
             </View>
             {local && <Text style={[s.small, { marginTop: 0, marginBottom: 3, color: C.leaf }]}>{local}</Text>}
+            {note?.timeline && <Text style={[s.small, { marginTop: 0, marginBottom: 3, color: C.bark }]}>{note.timeline}</Text>}
             {c.seasons.map((t) => (
               <View key={t.season} style={s.seasonRow}>
                 <Text style={s.seasonName}>{SEASON_LABEL[t.season]}</Text>
@@ -253,11 +257,19 @@ function CropCardPdf({ c, local }: { c: CropEvaluation; local?: string | null })
               </View>
             ))}
             <Text style={s.small}>{`Heat risk: ${c.heatNote}`}</Text>
+            {note?.money && (
+              <View style={{ marginTop: 4, padding: 6, backgroundColor: C.paper, borderRadius: 3 }}>
+                <Text style={[s.bold, { fontSize: 8.5 }]}>Will it pay? (your figures, per hectare)</Text>
+                {note.money.map((l) => (
+                  <Text key={l} style={[s.small, { marginTop: 1, color: C.bark }]}>{l}</Text>
+                ))}
+              </View>
+            )}
           </View>
   );
 }
 
-export function ReportDocument({ analysis, crops, brief, region, placeName }: ReportInput) {
+export function ReportDocument({ analysis, crops, brief, region, placeName, notes: notesByCrop = {} }: ReportInput) {
   const rows = seasonRows(analysis);
   // `crops` arrive already ranked by rankCrops (shared/ranking.ts); keep that order.
   const sorted = crops;
@@ -306,6 +318,9 @@ export function ReportDocument({ analysis, crops, brief, region, placeName }: Re
           {`Latitude ${loc.lat.toFixed(2)}, longitude ${loc.lon.toFixed(2)}${loc.elevation != null ? `, elevation ${Math.round(loc.elevation)} m` : ""}. Climate data prepared ${generated}.`}
         </Text>
 
+        <Text style={[s.small, { marginTop: 10, marginBottom: -6 }]}>
+          For replanting decisions: a block lost to fire, flood, drought or disease, or old trees being replaced. Take it to your nursery, adviser, bank or recovery program.
+        </Text>
         <Text style={s.lead}>
           {`A typical winter here gave about ${int(b)} chill portions (the Dynamic Model measure Australian fruit research uses) in ${period(analysis.baseline.period)}. For ${period(analysis.future.period)}, the years a tree planted now spends cropping, it is projected at about ${int(f)}${change < 0 ? `, ${Math.abs(change)}% less` : change > 0 ? `, ${change}% more` : ""}.`}
           {best
@@ -372,7 +387,7 @@ export function ReportDocument({ analysis, crops, brief, region, placeName }: Re
                   const d = describeGrown(g);
                   return d ? [grownFor(region, c.id).length > 1 ? `${g.name.toLowerCase()} ${d}` : d] : [];
                 });
-                return <CropCardPdf key={c.id} c={c} local={items.length ? `Grown here: ${items.join("; ")}.` : null} />;
+                return <CropCardPdf key={c.id} c={c} note={notesByCrop[c.id]} local={items.length ? `Grown here: ${items.join("; ")}.` : null} />;
               })
             ) : (
               <Text style={s.muted}>
@@ -389,9 +404,9 @@ export function ReportDocument({ analysis, crops, brief, region, placeName }: Re
             <View wrap={false}>
               <Text style={s.h2}>Could also suit this area</Text>
               <Text style={[s.muted, { marginBottom: 6 }]}>Crops not commonly grown here whose climate fit still works, best fit first.</Text>
-              {groups.couldSuit[0] ? <CropCardPdf c={groups.couldSuit[0]} /> : <Text style={s.muted}>No other crop in our database is a good or risky fit here.</Text>}
+              {groups.couldSuit[0] ? <CropCardPdf c={groups.couldSuit[0]} note={notesByCrop[groups.couldSuit[0].id]} /> : <Text style={s.muted}>No other crop in our database is a good or risky fit here.</Text>}
             </View>
-            {groups.couldSuit.slice(1).map((c) => <CropCardPdf key={c.id} c={c} />)}
+            {groups.couldSuit.slice(1).map((c) => <CropCardPdf key={c.id} c={c} note={notesByCrop[c.id]} />)}
             {groups.struggles.length > 0 && (
               <View wrap={false}>
                 <Text style={s.h2}>Struggles here</Text>
@@ -410,7 +425,7 @@ export function ReportDocument({ analysis, crops, brief, region, placeName }: Re
             <Text style={[s.muted, { marginBottom: 6 }]}>
               Best fit first. Each crop is judged on the season that troubles it most.
             </Text>
-            {sorted.map((c) => <CropCardPdf key={c.id} c={c} />)}
+            {sorted.map((c) => <CropCardPdf key={c.id} c={c} note={notesByCrop[c.id]} />)}
           </>
         )}
         {waterOut && (

@@ -21,7 +21,19 @@
       "indicative": true,
       "source": "Murray (2020), Critical Temperatures for Frost Damage on Fruit Trees, USU Extension IPM-012-11 (WSU table): full bloom, 10% kill, 27 F = -2.8 C. US source; district-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        2,
+        4
+      ],
+      "fullCropYears": [
+        6,
+        10
+      ],
+      "indicative": true,
+      "source": "Kansas State University Research and Extension, 'Why fruit trees fail to bear' (years from planting to fruit: apple and apricot 2-5, peach 2-4, pear 4-6, sweet cherry 4-7, plum 3-6). US general guidance, often home orchards; high-density commercial orchards on dwarfing rootstocks can bear earlier; full crop: peach peak productivity in years 6-10 (Cummins Nursery, Time to Productivity & Maturity)"
+    }
   },
   {
     "id": "peach-low",
@@ -46,7 +58,19 @@
       "indicative": true,
       "source": "Murray (2020), Critical Temperatures for Frost Damage on Fruit Trees, USU Extension IPM-012-11 (WSU table): full bloom, 10% kill, 27 F = -2.8 C. US source; district-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        2,
+        4
+      ],
+      "fullCropYears": [
+        6,
+        10
+      ],
+      "indicative": true,
+      "source": "Kansas State University Research and Extension, 'Why fruit trees fail to bear' (years from planting to fruit: apple and apricot 2-5, peach 2-4, pear 4-6, sweet cherry 4-7, plum 3-6). US general guidance, often home orchards; high-density commercial orchards on dwarfing rootstocks can bear earlier; full crop: peach peak productivity in years 6-10 (Cummins Nursery, Time to Productivity & Maturity)"
+    }
   },
   {
     "id": "apricot",
@@ -70,7 +94,16 @@
       "indicative": true,
       "source": "Murray (2020), Critical Temperatures for Frost Damage on Fruit Trees, USU Extension IPM-012-11 (WSU table): full bloom, 10% kill, 27 F = -2.8 C. US source; district-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        2,
+        5
+      ],
+      "fullCropYears": null,
+      "indicative": true,
+      "source": "Kansas State University Research and Extension, 'Why fruit trees fail to bear' (years from planting to fruit: apple and apricot 2-5, peach 2-4, pear 4-6, sweet cherry 4-7, plum 3-6). US general guidance, often home orchards; high-density commercial orchards on dwarfing rootstocks can bear earlier"
+    }
   },
   {
     "id": "plum-japanese",
@@ -95,7 +128,16 @@
       "indicative": true,
       "source": "Murray (2020), Critical Temperatures for Frost Damage on Fruit Trees, USU Extension IPM-012-11 (WSU table): full bloom, 10% kill, 27 F = -2.8 C. US source; district-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        3,
+        6
+      ],
+      "fullCropYears": null,
+      "indicative": true,
+      "source": "Kansas State University Research and Extension, 'Why fruit trees fail to bear' (years from planting to fruit: apple and apricot 2-5, peach 2-4, pear 4-6, sweet cherry 4-7, plum 3-6). US general guidance, often home orchards; high-density commercial orchards on dwarfing rootstocks can bear earlier"
+    }
   },
   {
     "id": "plum-european",
@@ -124,7 +166,16 @@
       "indicative": true,
       "source": "Murray (2020), Critical Temperatures for Frost Damage on Fruit Trees, USU Extension IPM-012-11 (WSU table): full bloom, 10% kill, 27 F = -2.8 C. US source; district-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        3,
+        6
+      ],
+      "fullCropYears": null,
+      "indicative": true,
+      "source": "Kansas State University Research and Extension, 'Why fruit trees fail to bear' (years from planting to fruit: apple and apricot 2-5, peach 2-4, pear 4-6, sweet cherry 4-7, plum 3-6). US general guidance, often home orchards; high-density commercial orchards on dwarfing rootstocks can bear earlier"
+    }
   },
   {
     "id": "cherry-standard",
@@ -154,7 +205,16 @@
       "indicative": true,
       "source": "Murray (2020), Critical Temperatures for Frost Damage on Fruit Trees, USU Extension IPM-012-11 (WSU table): full bloom, 10% kill, 28 F = -2.2 C. US source; district-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        4,
+        7
+      ],
+      "fullCropYears": null,
+      "indicative": true,
+      "source": "Kansas State University Research and Extension, 'Why fruit trees fail to bear' (years from planting to fruit: apple and apricot 2-5, peach 2-4, pear 4-6, sweet cherry 4-7, plum 3-6). US general guidance, often home orchards; high-density commercial orchards on dwarfing rootstocks can bear earlier"
+    }
   },
   {
     "id": "cherry-low",
@@ -184,7 +244,16 @@
       "indicative": true,
       "source": "Murray (2020), Critical Temperatures for Frost Damage on Fruit Trees, USU Extension IPM-012-11 (WSU table): full bloom, 10% kill, 28 F = -2.2 C. US source; district-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        4,
+        7
+      ],
+      "fullCropYears": null,
+      "indicative": true,
+      "source": "Kansas State University Research and Extension, 'Why fruit trees fail to bear' (years from planting to fruit: apple and apricot 2-5, peach 2-4, pear 4-6, sweet cherry 4-7, plum 3-6). US general guidance, often home orchards; high-density commercial orchards on dwarfing rootstocks can bear earlier"
+    }
   },
   {
     "id": "apple-mainstream",
@@ -209,7 +278,16 @@
       "indicative": true,
       "source": "Murray (2020), Critical Temperatures for Frost Damage on Fruit Trees, USU Extension IPM-012-11 (WSU table): full bloom, 10% kill, 28 F = -2.2 C. US source; district-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        2,
+        5
+      ],
+      "fullCropYears": null,
+      "indicative": true,
+      "source": "Kansas State University Research and Extension, 'Why fruit trees fail to bear' (years from planting to fruit: apple and apricot 2-5, peach 2-4, pear 4-6, sweet cherry 4-7, plum 3-6). US general guidance, often home orchards; high-density commercial orchards on dwarfing rootstocks can bear earlier; apples vary most with rootstock (University of Maine Cooperative Extension)"
+    }
   },
   {
     "id": "apple-low",
@@ -234,7 +312,16 @@
       "indicative": true,
       "source": "Murray (2020), Critical Temperatures for Frost Damage on Fruit Trees, USU Extension IPM-012-11 (WSU table): full bloom, 10% kill, 28 F = -2.2 C. US source; district-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        2,
+        5
+      ],
+      "fullCropYears": null,
+      "indicative": true,
+      "source": "Kansas State University Research and Extension, 'Why fruit trees fail to bear' (years from planting to fruit: apple and apricot 2-5, peach 2-4, pear 4-6, sweet cherry 4-7, plum 3-6). US general guidance, often home orchards; high-density commercial orchards on dwarfing rootstocks can bear earlier; apples vary most with rootstock (University of Maine Cooperative Extension)"
+    }
   },
   {
     "id": "pear",
@@ -258,7 +345,16 @@
       "indicative": true,
       "source": "Murray (2020), Critical Temperatures for Frost Damage on Fruit Trees, USU Extension IPM-012-11 (WSU table): full bloom, 10% kill, 28 F = -2.2 C. US source; district-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        4,
+        6
+      ],
+      "fullCropYears": null,
+      "indicative": true,
+      "source": "Kansas State University Research and Extension, 'Why fruit trees fail to bear' (years from planting to fruit: apple and apricot 2-5, peach 2-4, pear 4-6, sweet cherry 4-7, plum 3-6). US general guidance, often home orchards; high-density commercial orchards on dwarfing rootstocks can bear earlier"
+    }
   },
   {
     "id": "almond",
@@ -283,7 +379,19 @@
       "indicative": true,
       "source": "Bloom late July to early September in Australia (Queensland Government almond crop summary; August pollination per Almond Board of Australia). Crop loss at or below 27-28 F (-2.8 to -2.2 C) at full bloom (UC farm advisor, The Almond Doctor, 2018). District-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        3,
+        4
+      ],
+      "fullCropYears": [
+        7,
+        8
+      ],
+      "indicative": false,
+      "source": "First crop after about 3 years and full production about 4 years later (The Farmer Magazine, 'Inside Australia's almond industry'); 3-4 years to nuts, another 4 to full production (AgWest Farm Credit, 2025 Almond Industry Perspective)"
+    }
   },
   {
     "id": "pistachio",
@@ -301,7 +409,19 @@
       "portionsSource": "Pope (compiler), Fruit & Nut Crop Chill Portions Requirements, UC Cooperative Extension, fruitsandnuts.ucanr.edu: Kerman 54-58, Peters 58-65 chill portions; Sirora 60 (Zhang & Taylor 2011, HortScience, a study of Sirora pistachio in Australia)"
     },
     "spring": null,
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        5,
+        7
+      ],
+      "fullCropYears": [
+        10,
+        14
+      ],
+      "indicative": true,
+      "source": "Productive between years 5 and 7, 10 or more years to full production (AgWest Farm Credit, 2025 Almond Industry Perspective); full fruition at 12-14 years (Wikifarmer)"
+    }
   },
   {
     "id": "walnut",
@@ -319,7 +439,19 @@
       "portionsSource": "Pope (compiler), Fruit & Nut Crop Chill Portions Requirements, UC Cooperative Extension, fruitsandnuts.ucanr.edu: Payne 38, Chandler 45-50, Hartley 54 chill portions (Luedeling et al. 2009, 2013)"
     },
     "spring": null,
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        4,
+        6
+      ],
+      "fullCropYears": [
+        11,
+        12
+      ],
+      "indicative": false,
+      "source": "First harvestable after 4-6 years, full productivity by 11-12 years (NSW DPIRD, Walnut industry expansion)"
+    }
   },
   {
     "id": "blueberry-southern",
@@ -344,7 +476,19 @@
       "indicative": true,
       "source": "Full bloom tolerates 28 F (-2.2 C): Michigan State University Extension, critical spring temperatures for blueberries. Flowering around September for highbush in Victoria (Clayton-Greene & Goubran 1987, Fruit Varieties Journal); October added for later varieties. District-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        3,
+        4
+      ],
+      "fullCropYears": [
+        5,
+        7
+      ],
+      "indicative": true,
+      "source": "Not harvested until the third or fourth season, maximum yields after 6 years or more (UC Small Farms Network, Blueberries); full crop 4-5 years after planting (University of Maine Extension Bulletin 2253)"
+    }
   },
   {
     "id": "blueberry-northern",
@@ -369,7 +513,19 @@
       "indicative": true,
       "source": "Full bloom tolerates 28 F (-2.2 C): Michigan State University Extension, critical spring temperatures for blueberries. Flowering around September for highbush in Victoria (Clayton-Greene & Goubran 1987, Fruit Varieties Journal); October added for later varieties. District-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        3,
+        4
+      ],
+      "fullCropYears": [
+        5,
+        7
+      ],
+      "indicative": true,
+      "source": "Not harvested until the third or fourth season, maximum yields after 6 years or more (UC Small Farms Network, Blueberries); full crop 4-5 years after planting (University of Maine Extension Bulletin 2253)"
+    }
   },
   {
     "id": "grape",
@@ -387,6 +543,18 @@
       "indicative": true,
       "source": "AWRI frost fact sheet (2017): shoots suffer 50% loss at -2.2 C at budburst and -1.1 C by the 4th-leaf stage (Gardea 1987). Damaging frosts from September to late October in Goulburn and Yarra Valley vineyards (Wine Australia final report RT 06/04-1). Scored on the 4th-leaf figure. District-level frost estimate"
     },
-    "summer": null
+    "summer": null,
+    "bearing": {
+      "firstCropYears": [
+        3,
+        3
+      ],
+      "fullCropYears": [
+        5,
+        6
+      ],
+      "indicative": true,
+      "source": "Full production normally in the fifth or sixth year (Oregon State University Extension, EC 1639 Growing table grapes); first worthwhile crop commonly around year 3"
+    }
   }
 ]

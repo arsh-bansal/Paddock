@@ -4,6 +4,9 @@
 
 Built for Climathon 2026, theme _Build for 2035_, COP31 priority: **Awareness Across All Areas** (helping farmers adapt to a changing climate and making climate knowledge accessible).
 
+
+**Paddock helps fruit growers choose what to replant, so the trees they plant today still pay off in the climate of the next 20 years.** Growers usually only change crops when they have to replant (after fire, flood, drought, disease, or when old trees wear out), and the new trees will spend their 20+ cropping years in a warmer, drier climate than today's.
+
 ## The problem
 
 Stone fruit, cherries, apples and pears need a certain amount of winter cold ("chill") to flower and fruit properly. Winters are warming. A grower replanting a block today is making a 20-year bet on a climate they can't see, and the wrong variety means patchy flowering and poor crops for the life of the trees. Climate projections exist, but not in a form that answers "what should I plant on this block?"
@@ -16,12 +19,12 @@ Stone fruit, cherries, apples and pears need a certain amount of winter cold ("c
    - **Could also suit this area:** other crops whose climate fit still works.
    - **Struggles here:** the rest, with the reason.
 
-   Each crop is judged season by season (winter chill, spring frost, summer heat), and a grower can adjust any crop for their exact variety.
+   Each crop is judged season by season (winter chill, spring frost, summer heat), shows when it starts and reaches full crop, and a grower can adjust it for their exact variety and add their own prices and costs to see when it pays back, with and without climate risk.
 3. **Understand the climate.** Water (irrigation today from ABS, and how the climate's water shortfall changes), season-by-season table, 50 years of winter chill, a plain-English summary (Gemini, from computed numbers only), and ways to reduce the risk.
 4. **Keep it.** Download a PDF report or save it on the device (opens offline).
 5. **Check a tree.** Photo triage for heat, water stress, pests and disease using Gemini vision.
 
-Details: `docs/regional-crops.md`, `docs/water.md`, `docs/seasons-and-reports.md`, `docs/crop-data-sources.md`.
+Details: `docs/money-and-timeline.md`, `docs/regional-crops.md`, `docs/water.md`, `docs/seasons-and-reports.md`, `docs/crop-data-sources.md`.
 
 ## How it works
 

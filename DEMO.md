@@ -15,10 +15,14 @@
 - [ ] Set `GEMINI_API_KEY` on the demo machine and test both AI features once.
 - [ ] Verify the methods citations (Linvill 1990, Weinberger 1950, Fishman et al. 1987, Luedeling et al. 2009).
 
+## The idea in one line
+
+When a grower has to replant, Paddock makes sure they plant for the climate their trees will actually live in.
+
 ## 3-minute pitch outline
 
-1. **Hook (20 s).** "A peach tree planted this winter is still cropping in 2045. What will winter look like then?"
+1. **Hook (20 s).** A grower has lost a block (fire, flood, drought, or the trees are just old). Whatever they replant will crop for 20+ years, in a climate that's changing. What should they plant?
 2. **Problem (30 s).** Fruit trees need winter chill. Winters are warming. Growers replant blocks on 20-year bets using last decade's climate. Wrong call = years of patchy crops.
-3. **Live demo (90 s).** Pick Shepparton: results appear straight away. Walk through "Grown around Shepparton today" (pears, apples, stone fruit and how each holds up to 2045), then "Could also suit this area". Open one crop's "Adjust for my variety" and enter a nursery figure. Show the chart (dots are real winters, band is 2026–2045) and "Write a summary". If time, switch to Swan Hill to show a different district, or do a photo check.
+3. **Live demo (90 s).** Pick Shepparton: results appear straight away. Walk through "Grown around Shepparton today" (pears, apples, stone fruit and how each holds up to 2045), then "Could also suit this area". Show a crop's timeline (when it first crops), then open "Will it pay?" with a grower's own figures: pay-back year with and without climate risk. Show the chart (dots are real winters, band is 2026–2045) and "Write a summary". If time, switch to Swan Hill to show a different district, or do a photo check.
 4. **Why it's credible (20 s).** Real reanalysis + 3 climate models, delta-change method, safe-winter-chill threshold from the research literature. Say the limitations.
 5. **2035 impact (20 s).** Avoids stranded orchards, keeps Victorian fruit supply stable, and turns climate projections into a decision a farmer can make. Next steps: sourced cultivar data with Ag Vic, frost risk, other states.
