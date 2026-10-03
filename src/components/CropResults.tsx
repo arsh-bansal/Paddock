@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import { hoursToPortions } from '../../shared/chillConversion';
-import { groupForRegion, type RegionCrops } from '../../shared/regionCrops';
+import { describeGrown, groupForRegion, grownFor, type GrownItem, type RegionCrops } from '../../shared/regionCrops';
 import type { CropEvaluation, SeasonVerdict } from '../../shared/seasons';
 import { describeSeason, requirementText, SEASON_LABEL } from '../lib/seasonRows';
 
@@ -75,7 +75,17 @@ function VarietyAdjust({ cropId, label, v }: { cropId: string; label: string; v:
   );
 }
 
-export function CropCard({ c, rank, variety }: { c: CropEvaluation; rank?: number; variety?: VarietyControl }) {
+/** "Grown here: about 2.1 million trees, 11% newly planted" (several lines for crops like grapes). */
+function localText(items: GrownItem[]): string | null {
+  const parts = items.flatMap((g) => {
+    const d = describeGrown(g);
+    return d ? [items.length > 1 ? `${g.name.toLowerCase()} ${d}` : d] : [];
+  });
+  return parts.length ? `Grown here: ${parts.join('; ')}.` : null;
+}
+
+export function CropCard({ c, rank, variety, local }: { c: CropEvaluation; rank?: number; variety?: VarietyControl; local?: GrownItem[] }) {
+  const localLine = local ? localText(local) : null;
   return (
     <li id={`crop-${c.id}`} className="scroll-mt-24 rounded-xl border border-line bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -86,6 +96,7 @@ export function CropCard({ c, rank, variety }: { c: CropEvaluation; rank?: numbe
           <div>
             <p className="font-bold">{c.label}</p>
             <p className="text-sm text-muted">{requirementText(c)}{c.portionsConverted ? ', converted from hours' : ''}</p>
+            {localLine && <p className="text-sm font-bold text-leaf">{localLine}</p>}
           </div>
         </div>
         <span className={`rounded-full px-3 py-1 text-sm font-bold ${VERDICT_UI[c.overall].chip}`}>{VERDICT_UI[c.overall].label}</span>
@@ -120,10 +131,19 @@ function Section({ id, title, blurb, children }: { id: string; title: string; bl
   );
 }
 
-function CardList({ crops, varietyFor }: { crops: CropEvaluation[]; varietyFor: (c: CropEvaluation) => VarietyControl | undefined }) {
+function CardList({ crops, varietyFor, region, ranked = true }: {
+  crops: CropEvaluation[];
+  varietyFor: (c: CropEvaluation) => VarietyControl | undefined;
+  /** When given, each card shows the district's ABS figures for that crop */
+  region?: RegionCrops | null;
+  /** Show rank numbers (off when the list isn't in climate-fit order) */
+  ranked?: boolean;
+}) {
   return (
     <ul className="space-y-3">
-      {crops.map((c, i) => <CropCard key={c.id} c={c} rank={i + 1} variety={varietyFor(c)} />)}
+      {crops.map((c, i) => (
+        <CropCard key={c.id} c={c} rank={ranked ? i + 1 : undefined} variety={varietyFor(c)} local={region ? grownFor(region, c.id) : undefined} />
+      ))}
     </ul>
   );
 }
@@ -183,23 +203,37 @@ export function CropResults({ ranked, region, placeName, varietyFor }: Props) {
       <Section id="results-grown" title={`Grown around ${placeName} today`}
         blurb={
           <>
-            <p>How the crops this district grows now hold up in the climate a tree planted today will crop in.</p>
-            {region.indicative && (
+            <p>The district’s own crops, largest plantings first, and how each holds up in the climate a tree planted today will crop in.</p>
+            {region.indicative ? (
               <p className="mt-1 text-sm">Preliminary list of local crops, to be replaced with ABS farm census figures.</p>
+            ) : (
+              <p className="mt-1 text-sm">
+                From the ABS Agricultural Census 2020–21. Small-area figures are estimates (most marked “use with caution”), so
+                treat the amounts as approximate.
+              </p>
             )}
           </>
         }>
         {g.grownToday.length > 0 ? (
-          <CardList crops={g.grownToday} varietyFor={varietyFor} />
+          <CardList crops={g.grownToday} varietyFor={varietyFor} region={region} ranked={false} />
+        ) : region.grownToday.length === 0 && region.note ? (
+          <p className="rounded-lg bg-sun-soft px-4 py-3 text-sun-ink">{region.note}</p>
         ) : (
           <p className="rounded-lg bg-paper px-4 py-3 text-muted">None of the main local crops are in our climate database yet.</p>
         )}
         {g.grownNoData.length > 0 && (
-          <p className="rounded-lg border border-dashed border-line px-4 py-3 text-sm">
-            <span className="font-bold">Also grown here: </span>
-            {g.grownNoData.join(', ')}.{' '}
-            <span className="text-muted">We don’t have climate thresholds for {g.grownNoData.length === 1 ? 'it' : 'these'} yet, so {g.grownNoData.length === 1 ? 'it isn’t' : 'they aren’t'} scored.</span>
-          </p>
+          <div className="rounded-lg border border-dashed border-line px-4 py-3 text-sm">
+            <p className="font-bold">Also grown here, not yet scored</p>
+            <ul className="mt-1 space-y-0.5">
+              {g.grownNoData.map((x) => (
+                <li key={x.name}>
+                  {x.name}
+                  {describeGrown(x) && <span className="text-muted">: {describeGrown(x)}</span>}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1 text-muted">We don’t have sourced climate thresholds for {g.grownNoData.length === 1 ? 'this crop' : 'these crops'} yet.</p>
+          </div>
         )}
       </Section>
 

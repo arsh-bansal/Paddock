@@ -13,7 +13,7 @@ import {
 import type { CropEvaluation, SeasonVerdict } from "../../shared/seasons";
 import type { ClimateAnalysis } from "../../shared/types";
 import { adaptationNotes } from "../lib/adaptation";
-import { groupForRegion, type RegionCrops } from "../../shared/regionCrops";
+import { describeGrown, groupForRegion, grownFor, type RegionCrops } from "../../shared/regionCrops";
 import {
   changeTone,
   describeSeason,
@@ -280,7 +280,7 @@ function ChillChart({
 }
 
 /** One crop's result card (overall verdict + the three seasons). */
-function CropCardPdf({ c }: { c: CropEvaluation }) {
+function CropCardPdf({ c, local }: { c: CropEvaluation; local?: string | null }) {
   return (
     <View style={s.card} wrap={false}>
             <View style={s.cardHead}>
@@ -299,6 +299,7 @@ function CropCardPdf({ c }: { c: CropEvaluation }) {
                 {VERDICT[c.overall].label}
               </Text>
             </View>
+            {local && <Text style={[s.small, { marginTop: 0, marginBottom: 3, color: C.leaf }]}>{local}</Text>}
             {c.seasons.map((t) => (
               <View key={t.season} style={s.seasonRow}>
                 <Text style={s.seasonName}>{SEASON_LABEL[t.season]}</Text>
@@ -408,16 +409,26 @@ export function ReportDocument({ analysis, crops, brief, region, placeName }: Re
           <>
             <Text style={s.h2} break>{`Grown around ${placeName} today`}</Text>
             <Text style={[s.muted, { marginBottom: 6 }]}>
-              {`How the crops this district grows now hold up through ${period(analysis.future.period)}. Each crop is judged on the season that troubles it most.${region.indicative ? " Preliminary list of local crops, to be replaced with ABS farm census figures." : ""}`}
+              {`How the crops this district grows now hold up through ${period(analysis.future.period)}. Each crop is judged on the season that troubles it most.${region.indicative ? " Preliminary list of local crops, to be replaced with ABS farm census figures." : " Local crops and amounts: ABS Agricultural Census 2020-21; small-area figures are estimates, so treat amounts as approximate."}`}
             </Text>
             {groups.grownToday.length > 0 ? (
-              groups.grownToday.map((c) => <CropCardPdf key={c.id} c={c} />)
+              groups.grownToday.map((c) => {
+                const items = grownFor(region, c.id).flatMap((g) => {
+                  const d = describeGrown(g);
+                  return d ? [grownFor(region, c.id).length > 1 ? `${g.name.toLowerCase()} ${d}` : d] : [];
+                });
+                return <CropCardPdf key={c.id} c={c} local={items.length ? `Grown here: ${items.join("; ")}.` : null} />;
+              })
             ) : (
-              <Text style={s.muted}>None of the main local crops are in our climate database yet.</Text>
+              <Text style={s.muted}>
+                {region.grownToday.length === 0 && region.note ? region.note : "None of the main local crops are in our climate database yet."}
+              </Text>
             )}
             {groups.grownNoData.length > 0 && (
               <Text style={[s.small, { marginBottom: 4 }]}>
-                {`Also grown here, not yet scored (no climate thresholds yet): ${groups.grownNoData.join(", ")}.`}
+                {`Also grown here, not yet scored (no climate thresholds yet): ${groups.grownNoData
+                  .map((x) => (describeGrown(x) ? `${x.name} (${describeGrown(x)})` : x.name))
+                  .join(", ")}.`}
               </Text>
             )}
             <View wrap={false}>

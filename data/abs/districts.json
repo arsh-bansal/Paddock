@@ -1,0 +1,11 @@
+{
+  "_readme": "Which ABS Statistical Areas (SA2, ASGS Edition 3) make up each preset district. Used by scripts/import-abs-region-crops.ts. Chosen as the rural SA2s around each preset town; urban SA2s (e.g. Shepparton - North) are left out because they hold almost no orchards.",
+  "districts": [
+    { "presetId": "shepparton", "name": "the Goulburn Valley around Shepparton", "sa2": { "216031418": "Shepparton Surrounds - East", "216031419": "Shepparton Surrounds - West", "216031415": "Mooroopna" } },
+    { "presetId": "cobram", "name": "the Goulburn Valley around Cobram", "sa2": { "216021411": "Cobram", "216021412": "Moira" } },
+    { "presetId": "harcourt", "name": "the Harcourt district", "sa2": { "202021028": "Castlemaine Surrounds" } },
+    { "presetId": "wandin", "name": "the Yarra Valley around Wandin", "sa2": { "211051285": "Wandin - Seville", "211051279": "Monbulk - Silvan", "211051286": "Yarra Valley" } },
+    { "presetId": "bacchus-marsh", "name": "the Bacchus Marsh district", "sa2": { "201021009": "Bacchus Marsh Surrounds", "213041353": "Bacchus Marsh" } },
+    { "presetId": "swan-hill", "name": "the Swan Hill district", "sa2": { "215031404": "Swan Hill", "215031405": "Swan Hill Surrounds" } }
+  ]
+}

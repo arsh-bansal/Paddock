@@ -16,8 +16,14 @@ describe('region crop data file', () => {
     const ids = new Set(CROP_OPTIONS.map((c) => c.id));
     for (const r of REGION_CROPS) for (const g of r.grownToday) if (g.cropId) expect(ids.has(g.cropId)).toBe(true);
   });
-  it('is flagged as preliminary until real ABS data replaces it', () => {
-    for (const r of REGION_CROPS) if (!r.source) expect(r.indicative).toBe(true);
+  it('comes from the ABS import, not hand-written placeholders', () => {
+    for (const r of REGION_CROPS) {
+      expect(r.indicative).toBe(false);
+      expect(r.source).toContain('ABS, Agricultural Commodities, Australia, 2020-21');
+    }
+  });
+  it('says so when a district has little commercial fruit', () => {
+    for (const r of REGION_CROPS) if (r.grownToday.length === 0) expect(r.note).toBeTruthy();
   });
 });
 
@@ -52,8 +58,13 @@ describe('groupForRegion', () => {
     expect(g.couldSuit.map((e) => e.id)).toEqual(['apple', 'cherry']);
     expect(g.struggles.map((e) => e.id)).toEqual(['plum', 'fig']);
   });
+  it('orders grown-today crops by the district list (largest first), not by climate rank', () => {
+    const bySize: RegionCrops = { ...region, grownToday: [{ cropId: 'cherry', name: 'Cherries' }, { cropId: 'apple', name: 'Apples' }] };
+    expect(groupForRegion(ranked, bySize).grownToday.map((e) => e.id)).toEqual(['cherry', 'apple']);
+  });
+
   it('lists local crops with no climate data by name', () => {
-    expect(groupForRegion(ranked, region).grownNoData).toEqual(['Almonds', 'Mystery']);
+    expect(groupForRegion(ranked, region).grownNoData.map((g) => g.name)).toEqual(['Almonds', 'Mystery']);
   });
   it('puts every crop in exactly one group', () => {
     const g = groupForRegion(ranked, region);
