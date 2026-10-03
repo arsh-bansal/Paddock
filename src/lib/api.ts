@@ -26,6 +26,21 @@ export function fetchClimate(lat: number, lon: number, label: string) {
   return request<ClimateAnalysis>(`/api/climate?${q}`);
 }
 
+export interface PlaceSuggestion {
+  id: number;
+  name: string;
+  label: string;
+  lat: number;
+  lon: number;
+  admin1: string | null;
+}
+
+export function searchPlaces(query: string, state?: string) {
+  const q = new URLSearchParams({ q: query });
+  if (state) q.set("state", state);
+  return request<{ results: PlaceSuggestion[] }>(`/api/geocode?${q}`);
+}
+
 export interface WaterFacts {
   orchardIrrigationMlPerHa: number | null;
   shortfallChangeMm: number;
