@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, FileDown, Save } from "lucide-react";
 import { cropLabel, defaultRequirement, type CropOption } from "../../shared/crops";
+import { badYearChance, emptyFinanceInputs, timelineFor } from "../../shared/finance";
 import { rankCrops } from "../../shared/ranking";
 import { regionForLocation, groupForRegion, type RegionCrops } from "../../shared/regionCrops";
 import { waterForRegion, waterOutlook } from "../../shared/regionWater";
@@ -13,11 +14,13 @@ import { initialOptionState, type OptionState } from "../lib/optionState";
 import { loadReport, saveReport } from "../lib/savedReports";
 import { useCombinedCrops } from "../lib/useCombinedCrops";
 import { downloadReport } from "../report/download";
+import { cropNotes } from "../lib/moneyText";
 import { AdaptationNotes } from "./AdaptationNotes";
 import { AddCropForm } from "./AddCropForm";
 import { Brief, briefSignature, type BriefState } from "./Brief";
 import { SeasonCharts } from "./SeasonCharts";
 import { CropResults, type VarietyControl } from "./CropResults";
+import type { FinanceControl } from "./MoneyPanel";
 import { LocationPicker, type PickedLocation } from "./LocationPicker";
 import { Methods } from "./Methods";
 import { SavedReports } from "./SavedReports";
@@ -64,6 +67,11 @@ function sameSpot(a: { lat: number; lon: number }, b: { lat: number; lon: number
 const BRIEF_CROP_CAP = 25;
 /** Lines drawn on the chill chart when the district has no crop list. */
 const CHART_TOP_N = 5;
+
+/** Each crop's money figures, for the PDF. */
+function financeById(options: OptionState) {
+  return Object.fromEntries(Object.entries(options).map(([id, o]) => [id, o.finance]));
+}
 
 /** The best overall crop, if it is a good fit. */
 function topCrop(crops: CropEvaluation[]): string | null {
@@ -186,12 +194,40 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
       hours: options[c.id]?.requirement ?? defaultHours,
       defaultHours,
       onChange: (hours) =>
-        setOptions((prev) => ({ ...prev, [c.id]: { selected: prev[c.id]?.selected ?? true, requirement: hours } })),
+        // Keep the crop's other settings (e.g. the grower's money figures) when changing chill hours.
+        setOptions((prev) => ({
+          ...prev,
+          [c.id]: { ...(prev[c.id] ?? { selected: true, requirement: defaultHours }), requirement: hours },
+        })),
+    };
+  };
+
+  const financeFor = (c: CropEvaluation): FinanceControl | undefined => {
+    const crop = combined.find((x) => x.id === c.id);
+    if (!crop || !analysis) return undefined;
+    const inputs = options[c.id]?.finance ?? emptyFinanceInputs();
+    return {
+      inputs,
+      onChange: (next) =>
+        setOptions((prev) => ({
+          ...prev,
+          [c.id]: { ...(prev[c.id] ?? { selected: true, requirement: defaultRequirement(crop) }), finance: next },
+        })),
+      timeline: timelineFor(crop, analysis.future.period[0], inputs),
+      endYear: analysis.future.period[1],
+      badYearChance: badYearChance(c),
     };
   };
 
   const download = async (
-    input: { analysis: ClimateAnalysis; crops: CropEvaluation[]; brief: string | null; region: RegionCrops | null; placeName: string },
+    input: {
+      analysis: ClimateAnalysis;
+      crops: CropEvaluation[];
+      brief: string | null;
+      region: RegionCrops | null;
+      placeName: string;
+      notes?: ReturnType<typeof cropNotes>;
+    },
     busyKey: string,
   ) => {
     setPdfBusy(busyKey);
@@ -258,7 +294,8 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
         return;
       }
       const r = res.report;
-      const savedRanked = evaluateAll(combined, r.analysis, mergeOptions(combined, r.options));
+      const savedOptions = mergeOptions(combined, r.options);
+      const savedRanked = evaluateAll(combined, r.analysis, savedOptions);
       const sig = briefSignature(r.analysis, savedRanked.slice(0, BRIEF_CROP_CAP));
       const savedRegion = regionForLocation(r.location);
       await download(
@@ -268,6 +305,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
           brief: r.brief?.signature === sig ? r.brief.text : null,
           region: savedRegion,
           placeName: placeNameFor(r.location, savedRegion),
+          notes: cropNotes(savedRanked, combined, financeById(savedOptions), r.analysis.future.period[0], r.analysis.future.period[1]),
         },
         id,
       );
@@ -336,7 +374,19 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
                 <button
                   type="button"
                   disabled={pdfBusy === "current" || ranked.length === 0}
-                  onClick={() => download({ analysis, crops: ranked, brief: currentBrief, region, placeName }, "current")}
+                  onClick={() =>
+                    download(
+                      {
+                        analysis,
+                        crops: ranked,
+                        brief: currentBrief,
+                        region,
+                        placeName,
+                        notes: cropNotes(ranked, combined, financeById(options), analysis.future.period[0], analysis.future.period[1]),
+                      },
+                      "current",
+                    )
+                  }
                   className="inline-flex items-center gap-2 rounded-lg bg-bark px-4 py-2 font-bold text-white disabled:opacity-50"
                 >
                   <FileDown size={18} aria-hidden /> {pdfBusy === "current" ? "Making PDF…" : "Download PDF report"}
@@ -360,7 +410,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
                 </p>
               )}
 
-              <CropResults ranked={ranked} region={region} placeName={placeName} varietyFor={varietyFor} />
+              <CropResults ranked={ranked} region={region} placeName={placeName} varietyFor={varietyFor} financeFor={financeFor} />
 
               <WaterPanel water={water} outlook={outlook} period={analysis.future.period} placeName={placeName} />
 

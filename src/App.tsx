@@ -57,8 +57,8 @@ export default function App() {
               A tree planted this winter is still cropping in 2045.
             </h1>
             <p className="mt-4 text-xl text-muted">
-              See how winter chill and summer heat are changing at your block,
-              and which crops will still fit the climate they’ll grow in.
+              Replanting after fire, flood, drought or old trees? See which crops
+              will still grow, and pay, in the climate your new trees will live in.
             </p>
           </div>
           <Planner aiEnabled={aiEnabled} />
