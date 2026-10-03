@@ -75,7 +75,7 @@ npm run build
 npm start                   # serves app + API on :8787
 ```
 
-Other scripts: `npm test`, `npm run lint`, `npm run snapshot` (pre-fetch climate data for all preset districts into `data/cache/` so the demo works offline).
+Other scripts: `npm test`, `npm run lint`, `npm run import:abs -- <AGCDCASGS202021.xlsx>` (rebuild district crop lists from ABS data), `npm run snapshot` (pre-fetch climate data for all preset districts into `data/cache/` so the demo works offline).
 
 ## Limitations (say these out loud, judges respect it)
 

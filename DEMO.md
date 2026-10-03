@@ -4,7 +4,8 @@
 
 - [ ] **Run `npm run snapshot` on good wifi** and commit `data/cache/`. The demo then works with no internet.
 - [ ] **Sanity-check the Shepparton numbers.** Typical winter chill should look plausible against published Goulburn Valley figures. If it's wildly off, tell the team before the judges do.
-- [ ] **Replace the placeholder "grown here today" lists** in `shared/regionCrops.data.json` with ABS Agricultural Census data per district (see `docs/regional-crops.md`). The app labels them preliminary until then.
+- [x] "Grown here today" lists come from the ABS Agricultural Census 2020–21 (`npm run import:abs`).
+- [ ] **Decide on Bacchus Marsh:** ABS records almost no commercial fruit there. Swap it for an active district or leave it to show the app handling that honestly.
 - [x] Almonds, pistachios, walnuts, blueberries and grapes added with sourced thresholds (olives stay unscored; see `docs/crop-data-sources.md`).
 - [ ] **Know the headline finding before you pitch it:** on winter chill and spring frost, every crop still fits all six Victorian districts through 2045. The districts differ on heat and water, which aren't scored per crop yet. Say that plainly; it's a real result.
 - [ ] **Replace converted chill-portion figures** with direct ones where a source exists (`docs/crop-data-sources.md`).
