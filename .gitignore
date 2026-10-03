@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Runtime climate cache for non-preset locations (presets live in data/snapshot/)
+data/cache/

@@ -192,8 +192,18 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(
     `Paddock API listening on http://localhost:${PORT}${isProd ? " (serving dist/)" : ""}`,
   );
 });
+
+// Hosting platforms (Cloud Run, Render, Fly) stop instances with SIGTERM: finish in-flight
+// requests, then exit. Force-exit if anything hangs.
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.on(signal, () => {
+    console.log(`${signal} received, shutting down`);
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 10_000).unref();
+  });
+}
