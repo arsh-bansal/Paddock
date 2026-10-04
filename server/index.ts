@@ -10,6 +10,7 @@ import { existsSync } from "node:fs";
 import { z } from "zod";
 import { AU_BOUNDS } from "../shared/regions";
 import type { ClimateAnalysis } from "../shared/types";
+import { RateLimitedError } from "./openMeteo";
 import { analyseLocation, DataUnavailableError } from "./analysis";
 import { AiUnavailableError, diagnosePhoto, explainResult } from "./gemini";
 
@@ -258,6 +259,16 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   }
   if (err instanceof DataUnavailableError) {
     res.status(422).json({ error: err.message });
+    return;
+  }
+  if (err instanceof RateLimitedError) {
+    const wait = { minute: "a minute", hour: "an hour", day: "a few hours" }[err.window];
+    res
+      .status(503)
+      .setHeader("Retry-After", { minute: "60", hour: "3600", day: "14400" }[err.window])
+      .json({
+        error: `The free climate data service is busy, so new locations can't load right now. Try again in ${wait}. The preset districts still work.`,
+      });
     return;
   }
   console.error("[api]", err);
