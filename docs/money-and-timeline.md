@@ -50,3 +50,27 @@ PDF in `src/lib/moneyText.ts`, UI in `src/components/MoneyPanel.tsx`.
 
 The start screen and the PDF now speak to growers replanting after fire, flood, drought, disease or
 old trees: the moment a grower can actually change crops.
+
+## Switching from a current crop
+
+"Thinking of switching?" at the top of the results: the grower picks what's on the block now.
+
+- **Their crop's outlook** first, with its own variety and money controls.
+- **Ways to switch, cheapest first:**
+  1. A different variety of the same crop (keeps shed, equipment and buyers), when one holds up at
+     least as well.
+  2. Top-working: grafting a new variety onto the existing trees. Only within the same kind of fruit
+     (UNH Extension); the block comes back into production much sooner than replanting (University
+     of Minnesota, *Horticulture* 10.1); apples and pears of almost any age, stone fruit over about
+     5 years usually not (Michigan State University Extension, *Top Working Fruit Trees*).
+  3. Replanting part of the block each year.
+  4. A full switch to a different crop.
+- **Holds up better on climate here:** crops ranked above the current one without a worse verdict.
+- **Stay or switch, your money:** staying = current trees already cropping, no planting cost;
+  switching = the new crop's timeline from 2026 with its planting cost. Both allow for climate risk.
+  Shows totals by 2045 and the year switching catches up, if it does. Doesn't include tree-removal
+  cost.
+
+The current crop is saved with reports and the PDF gets a "Switching from …" section.
+Code: `shared/switching.ts` (tested in `tests/switching.test.ts`), `src/lib/switchText.ts`,
+`src/components/SwitchPanel.tsx`.
