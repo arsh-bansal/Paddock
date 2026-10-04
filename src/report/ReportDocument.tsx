@@ -16,6 +16,7 @@ import { adaptationNotes } from "../lib/adaptation";
 import { describeGrown, groupForRegion, grownFor, type RegionCrops } from "../../shared/regionCrops";
 import { waterForRegion, waterOutlook } from "../../shared/regionWater";
 import type { CropNotes } from "../lib/moneyText";
+import type { SwitchReport } from "../lib/switchText";
 import { districtComparison, outlookText, todayText, WATER_CAVEAT } from "../lib/waterText";
 import { axisFor, SEASON_METRICS, seriesFor, seriesLine, type SeasonSeries } from "../lib/seasonSeries";
 import {
@@ -45,6 +46,8 @@ export interface ReportInput {
   placeName: string;
   /** Per-crop timeline and money lines (see cropNotes in src/lib/moneyText.ts) */
   notes?: Record<string, CropNotes>;
+  /** Switching from the grower's current crop, if they said what they grow */
+  switching?: SwitchReport | null;
 }
 
 const C = {
@@ -269,7 +272,7 @@ function CropCardPdf({ c, local, note }: { c: CropEvaluation; local?: string | n
   );
 }
 
-export function ReportDocument({ analysis, crops, brief, region, placeName, notes: notesByCrop = {} }: ReportInput) {
+export function ReportDocument({ analysis, crops, brief, region, placeName, notes: notesByCrop = {}, switching = null }: ReportInput) {
   const rows = seasonRows(analysis);
   // `crops` arrive already ranked by rankCrops (shared/ranking.ts); keep that order.
   const sorted = crops;
@@ -428,6 +431,30 @@ export function ReportDocument({ analysis, crops, brief, region, placeName, note
             {sorted.map((c) => <CropCardPdf key={c.id} c={c} note={notesByCrop[c.id]} />)}
           </>
         )}
+        {switching && (
+          <View wrap={false}>
+            <Text style={s.h2}>{`Switching from ${switching.current.toLowerCase()}`}</Text>
+            <Text style={s.p}>
+              {`What you grow now: ${switching.current}, ${VERDICT[switching.verdict].label.toLowerCase()} through ${period(analysis.future.period)}. ` +
+                (switching.alreadyBest
+                  ? "On climate it's already among the best fits for this block."
+                  : `Holds up better on climate here: ${switching.better.join(", ")}.`)}
+            </Text>
+            <Text style={[s.bold, { marginTop: 6 }]}>Ways to switch, cheapest first</Text>
+            {switching.paths.map((p, n) => (
+              <Text key={p.title} style={[s.p, { marginTop: 2 }]}>{`${n + 1}. ${p.title}. ${p.text}`}</Text>
+            ))}
+            {switching.stayVsSwitch && (
+              <View style={{ marginTop: 6, padding: 6, backgroundColor: C.paper, borderRadius: 3 }}>
+                <Text style={[s.bold, { fontSize: 8.5 }]}>Stay or switch (your figures, per hectare, allowing for climate risk)</Text>
+                {switching.stayVsSwitch.map((l) => (
+                  <Text key={l} style={[s.small, { marginTop: 1, color: C.bark }]}>{l}</Text>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
         {waterOut && (
           <View wrap={false}>
             <Text style={s.h2}>Water</Text>

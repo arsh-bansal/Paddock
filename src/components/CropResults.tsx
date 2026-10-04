@@ -137,7 +137,7 @@ function Section({ id, title, blurb, children }: { id: string; title: string; bl
   );
 }
 
-function CardList({ crops, varietyFor, financeFor, region, ranked = true }: {
+export function CardList({ crops, varietyFor, financeFor, region, ranked = true }: {
   crops: CropEvaluation[];
   varietyFor: (c: CropEvaluation) => VarietyControl | undefined;
   financeFor?: (c: CropEvaluation) => FinanceControl | undefined;

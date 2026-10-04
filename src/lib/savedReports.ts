@@ -21,6 +21,8 @@ export interface SavedReport {
   options: OptionState;
   analysis: ClimateAnalysis;
   brief: BriefState | null;
+  /** The crop on the block now, if the grower said (optional so older saved reports still load) */
+  currentCropId?: string | null;
 }
 
 export interface SavedReportMeta {

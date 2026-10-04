@@ -15,6 +15,7 @@ import { loadReport, saveReport } from "../lib/savedReports";
 import { useCombinedCrops } from "../lib/useCombinedCrops";
 import { downloadReport } from "../report/download";
 import { cropNotes } from "../lib/moneyText";
+import { switchReport } from "../lib/switchText";
 import { AdaptationNotes } from "./AdaptationNotes";
 import { AddCropForm } from "./AddCropForm";
 import { Brief, briefSignature, type BriefState } from "./Brief";
@@ -25,6 +26,7 @@ import { LocationPicker, type PickedLocation } from "./LocationPicker";
 import { Methods } from "./Methods";
 import { SavedReports } from "./SavedReports";
 import { SeasonsPanel } from "./SeasonsPanel";
+import { SwitchPanel } from "./SwitchPanel";
 import { WaterPanel } from "./WaterPanel";
 
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
@@ -108,6 +110,8 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
   const [options, setOptions] = useState<OptionState>(initialOptionState);
   const [analysis, setAnalysis] = useState<ClimateAnalysis | null>(null);
   const [brief, setBrief] = useState<BriefState | null>(null);
+  const [currentCropId, setCurrentCropId] = useState<string | null>(null);
+  const [compareCropId, setCompareCropId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -227,6 +231,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
       region: RegionCrops | null;
       placeName: string;
       notes?: ReturnType<typeof cropNotes>;
+      switching?: ReturnType<typeof switchReport>;
     },
     busyKey: string,
   ) => {
@@ -248,7 +253,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
     try {
       const loc = location && sameSpot(location, analysis.location) ? location : { ...analysis.location };
       await saveReport(
-        { location: loc, options, analysis, brief: currentBrief ? brief : null },
+        { location: loc, options, analysis, brief: currentBrief ? brief : null, currentCropId },
         { topCrop: topCrop(ranked), cropCount: ranked.length },
       );
       setSavedSignature(`${signature}|${currentBrief ?? ""}`);
@@ -277,6 +282,8 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
       setOptions(opts);
       setAnalysis(r.analysis);
       setBrief(r.brief);
+      setCurrentCropId(r.currentCropId ?? null);
+      setCompareCropId(null);
       setError(null);
       const sig = briefSignature(r.analysis, evaluateAll(combined, r.analysis, opts).slice(0, BRIEF_CROP_CAP));
       setSavedSignature(`${sig}|${r.brief?.signature === sig ? r.brief.text : ""}`);
@@ -306,6 +313,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
           region: savedRegion,
           placeName: placeNameFor(r.location, savedRegion),
           notes: cropNotes(savedRanked, combined, financeById(savedOptions), r.analysis.future.period[0], r.analysis.future.period[1]),
+          switching: switchReport(r.currentCropId ?? null, null, savedRanked, combined, financeById(savedOptions), r.analysis.future.period),
         },
         id,
       );
@@ -383,6 +391,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
                         region,
                         placeName,
                         notes: cropNotes(ranked, combined, financeById(options), analysis.future.period[0], analysis.future.period[1]),
+                        switching: switchReport(currentCropId, compareCropId, ranked, combined, financeById(options), analysis.future.period),
                       },
                       "current",
                     )
@@ -409,6 +418,21 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
                   {actionError}
                 </p>
               )}
+
+              <SwitchPanel
+                ranked={ranked}
+                crops={combined}
+                currentId={currentCropId}
+                onCurrent={(id) => {
+                  setCurrentCropId(id);
+                  setCompareCropId(null);
+                }}
+                compareId={compareCropId}
+                onCompare={setCompareCropId}
+                varietyFor={varietyFor}
+                financeFor={financeFor}
+                period={analysis.future.period}
+              />
 
               <CropResults ranked={ranked} region={region} placeName={placeName} varietyFor={varietyFor} financeFor={financeFor} />
 
