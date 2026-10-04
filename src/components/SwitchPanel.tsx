@@ -73,7 +73,7 @@ export function SwitchPanel({ ranked, crops, currentId, onCurrent, compareId, on
               What you grow now: <span className={`rounded-full px-2.5 py-0.5 text-base ${VERDICT_UI[a.current.overall].chip}`}>{VERDICT_UI[a.current.overall].label}</span>
             </h4>
             <ul className="space-y-3">
-              <CropCard c={a.current} variety={varietyFor(a.current)} finance={financeFor(a.current)} />
+              <CropCard c={a.current} variety={varietyFor(a.current)} finance={financeFor(a.current)} defaultOpen />
             </ul>
             <p className="text-sm text-muted">
               In “Will it pay?” for your current crop, enter the price, yield and running cost of your existing trees. The cost to plant is ignored when comparing, since they’re already in the ground.

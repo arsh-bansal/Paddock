@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { hoursToPortions } from '../../shared/chillConversion';
 import { describeGrown, groupForRegion, grownFor, type GrownItem, type RegionCrops } from '../../shared/regionCrops';
 import type { CropEvaluation, SeasonVerdict } from '../../shared/seasons';
@@ -86,26 +87,41 @@ function localText(items: GrownItem[]): string | null {
   return parts.length ? `Grown here: ${parts.join('; ')}.` : null;
 }
 
-export function CropCard({ c, rank, variety, local, finance }: {
-  c: CropEvaluation; rank?: number; variety?: VarietyControl; local?: GrownItem[]; finance?: FinanceControl;
+/**
+ * One crop. Collapsed it is a single scannable row (rank, name, verdict, a dot per season);
+ * expanded it shows the full season breakdown, variety adjuster and money panel.
+ */
+export function CropCard({ c, rank, variety, local, finance, defaultOpen = false }: {
+  c: CropEvaluation; rank?: number; variety?: VarietyControl; local?: GrownItem[]; finance?: FinanceControl; defaultOpen?: boolean;
 }) {
   const localLine = local ? localText(local) : null;
+  // A grower who has typed their own variety figure is working on this card: keep it open.
+  const [open, setOpen] = useState(defaultOpen || (variety != null && variety.hours !== variety.defaultHours));
   return (
-    <li id={`crop-${c.id}`} className="scroll-mt-24 rounded-xl border border-line bg-card p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex items-baseline gap-3">
+    <li id={`crop-${c.id}`} className="scroll-mt-24 rounded-xl border border-line bg-card">
+      <details open={open} onToggle={(e) => setOpen(e.currentTarget.open)} className="group">
+        <summary className="flex cursor-pointer list-none items-center gap-3 rounded-xl px-4 py-3 hover:bg-paper/60 [&::-webkit-details-marker]:hidden">
           {rank != null && (
-            <span className="font-display text-xl font-extrabold text-leaf/50 tabular" aria-label={`Rank ${rank}`}>{rank}</span>
+            <span className="w-6 shrink-0 font-display text-xl font-extrabold text-leaf/50 tabular" aria-label={`Rank ${rank}`}>{rank}</span>
           )}
-          <div>
-            <p className="font-bold">{c.label}</p>
-            <p className="text-sm text-muted">{requirementText(c)}{c.portionsConverted ? ', converted from hours' : ''}</p>
-            {localLine && <p className="text-sm font-bold text-leaf">{localLine}</p>}
-            {finance?.timeline && <p className="text-sm">{timelineText(finance.timeline)}</p>}
-          </div>
-        </div>
-        <span className={`rounded-full px-3 py-1 text-sm font-bold ${VERDICT_UI[c.overall].chip}`}>{VERDICT_UI[c.overall].label}</span>
-      </div>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">{c.label}</span>
+            <span className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-muted">
+              {c.seasons.map((s) => (
+                <span key={s.season} className="inline-flex items-center gap-1.5">
+                  <span aria-hidden className={`size-2 rounded-full ${VERDICT_UI[s.verdict].dot}`} />
+                  {SEASON_LABEL[s.season]}<span className="sr-only">: {VERDICT_UI[s.verdict].label}</span>
+                </span>
+              ))}
+            </span>
+          </span>
+          <span className={`shrink-0 rounded-full px-3 py-1 text-sm font-bold ${VERDICT_UI[c.overall].chip}`}>{VERDICT_UI[c.overall].label}</span>
+          <ChevronDown size={20} aria-hidden className="shrink-0 text-muted transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="border-t border-line px-4 pb-4 pt-3">
+          <p className="text-sm text-muted">{requirementText(c)}{c.portionsConverted ? ', converted from hours' : ''}</p>
+          {localLine && <p className="text-sm font-bold text-leaf">{localLine}</p>}
+          {finance?.timeline && <p className="text-sm">{timelineText(finance.timeline)}</p>}
       <ul className="mt-3 divide-y divide-line">
         {c.seasons.map((s) => (
           <li key={s.season} className="grid gap-x-3 py-2 sm:grid-cols-[9rem_1fr_auto] sm:items-baseline">
@@ -121,6 +137,8 @@ export function CropCard({ c, rank, variety, local, finance }: {
       <p className="mt-2 text-sm text-muted"><span className="font-bold text-sun-ink">Heat risk.</span> {c.heatNote}</p>
       {variety && <VarietyAdjust cropId={c.id} label={c.label} v={variety} />}
       {finance && <MoneyPanel label={c.label} f={finance} />}
+        </div>
+      </details>
     </li>
   );
 }
@@ -137,7 +155,7 @@ function Section({ id, title, blurb, children }: { id: string; title: string; bl
   );
 }
 
-export function CardList({ crops, varietyFor, financeFor, region, ranked = true }: {
+export function CardList({ crops, varietyFor, financeFor, region, ranked = true, openFirst = false }: {
   crops: CropEvaluation[];
   varietyFor: (c: CropEvaluation) => VarietyControl | undefined;
   financeFor?: (c: CropEvaluation) => FinanceControl | undefined;
@@ -145,11 +163,14 @@ export function CardList({ crops, varietyFor, financeFor, region, ranked = true 
   region?: RegionCrops | null;
   /** Show rank numbers (off when the list isn't in climate-fit order) */
   ranked?: boolean;
+  /** Start with the first card expanded (the top answer on the page) */
+  openFirst?: boolean;
 }) {
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-2">
       {crops.map((c, i) => (
         <CropCard key={c.id} c={c} rank={ranked ? i + 1 : undefined} variety={varietyFor(c)} finance={financeFor?.(c)}
+          defaultOpen={openFirst && i === 0}
           local={region ? grownFor(region, c.id) : undefined} />
       ))}
     </ul>
@@ -191,12 +212,13 @@ export function CropResults({ ranked, region, placeName, varietyFor, financeFor 
         <Section id="results-all" title={`How each crop fares at ${placeName}`}
           blurb="We don’t have a list of what’s grown around this spot yet, so here’s every crop in our database, best fit first.">
           <div className="space-y-5">
-            {VERDICT_GROUPS.map(({ verdict, title }) => {
+            {VERDICT_GROUPS.map(({ verdict, title }, gi) => {
               const items = ranked.filter((c) => c.overall === verdict);
+              const firstGroup = VERDICT_GROUPS.findIndex((v) => ranked.some((c) => c.overall === v.verdict)) === gi;
               return items.length ? (
                 <div key={verdict} className="space-y-2">
                   <h4 className="font-display text-lg font-bold">{title} <span className="text-muted">({items.length})</span></h4>
-                  <CardList crops={items} varietyFor={varietyFor} financeFor={financeFor} />
+                  <CardList crops={items} varietyFor={varietyFor} financeFor={financeFor} openFirst={firstGroup} />
                 </div>
               ) : null;
             })}
@@ -224,7 +246,7 @@ export function CropResults({ ranked, region, placeName, varietyFor, financeFor 
           </>
         }>
         {g.grownToday.length > 0 ? (
-          <CardList crops={g.grownToday} varietyFor={varietyFor} financeFor={financeFor} region={region} ranked={false} />
+          <CardList crops={g.grownToday} varietyFor={varietyFor} financeFor={financeFor} region={region} ranked={false} openFirst />
         ) : region.grownToday.length === 0 && region.note ? (
           <p className="rounded-lg bg-sun-soft px-4 py-3 text-sun-ink">{region.note}</p>
         ) : (
@@ -249,7 +271,7 @@ export function CropResults({ ranked, region, placeName, varietyFor, financeFor 
       <Section id="results-could" title="Could also suit this area"
         blurb="Crops not commonly grown here whose climate fit still works through 2045, best fit first.">
         {g.couldSuit.length > 0 ? (
-          <CardList crops={g.couldSuit} varietyFor={varietyFor} financeFor={financeFor} />
+          <CardList crops={g.couldSuit} varietyFor={varietyFor} financeFor={financeFor} openFirst={g.grownToday.length === 0} />
         ) : (
           <p className="rounded-lg bg-paper px-4 py-3 text-muted">No other crop in our database is a good or risky fit here.</p>
         )}
