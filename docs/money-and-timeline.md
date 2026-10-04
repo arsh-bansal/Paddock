@@ -50,3 +50,37 @@ PDF in `src/lib/moneyText.ts`, UI in `src/components/MoneyPanel.tsx`.
 
 The start screen and the PDF now speak to growers replanting after fire, flood, drought, disease or
 old trees: the moment a grower can actually change crops.
+
+## Switching from a current crop
+
+"Thinking of switching?" at the top of the results: the grower picks what's on the block now.
+
+- **Their crop's outlook** first, with its own variety and money controls.
+- **Ways to switch, cheapest first:**
+  1. A different variety of the same crop (keeps shed, equipment and buyers), when one holds up at
+     least as well.
+  2. Top-working: grafting a new variety onto the existing trees. Only within the same kind of fruit
+     (UNH Extension); the block comes back into production much sooner than replanting (University
+     of Minnesota, *Horticulture* 10.1); apples and pears of almost any age, stone fruit over about
+     5 years usually not (Michigan State University Extension, *Top Working Fruit Trees*).
+  3. Replanting part of the block each year.
+  4. A full switch to a different crop.
+- **Holds up better on climate here:** crops ranked above the current one without a worse verdict.
+- **Stay or switch, your money:** staying = current trees already cropping, no planting cost;
+  switching = the new crop's timeline from 2026 with its planting cost. Both allow for climate risk.
+  Shows totals by 2045 and the year switching catches up, if it does. Doesn't include tree-removal
+  cost.
+
+The current crop is saved with reports and the PDF gets a "Switching from …" section.
+Code: `shared/switching.ts` (tested in `tests/switching.test.ts`), `src/lib/switchText.ts`,
+`src/components/SwitchPanel.tsx`.
+
+### Something else (not in the list)
+
+For a grower whose current crop or enterprise isn't in the database (olives, citrus, grazing,
+cropping), "Something else" lets them type what it is. Paddock says plainly that it can't rate that
+crop's climate outlook, mentions it if the district's ABS list includes it ("Olives: about 1 million
+trees around here"), and shows what holds up well on the block. Switch routes are replanting
+gradually or switching the whole block (grafting only works within the same kind of fruit). Stay or
+switch uses the grower's own income and running cost per hectare for the current enterprise, with
+no climate adjustment, and says so. Saved with reports; the PDF section explains the same.
