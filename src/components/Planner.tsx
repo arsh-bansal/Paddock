@@ -26,6 +26,7 @@ import { LocationPicker, type PickedLocation } from "./LocationPicker";
 import { Methods } from "./Methods";
 import { SavedReports } from "./SavedReports";
 import { SeasonsPanel } from "./SeasonsPanel";
+import { HistoryPanel } from "./HistoryPanel";
 import { SwitchPanel } from "./SwitchPanel";
 import { emptyOtherCrop, type OtherCrop } from "../../shared/switching";
 import { WaterPanel } from "./WaterPanel";
@@ -453,6 +454,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
                 onDelete={removeCrop}
               />
 
+              <HistoryPanel analysis={analysis} placeName={placeName} />
               <SeasonsPanel analysis={analysis} />
               <SeasonCharts analysis={analysis} crops={chartCrops(ranked, region)} placeName={placeName} />
               <Brief

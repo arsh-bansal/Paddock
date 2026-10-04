@@ -48,10 +48,12 @@ export interface RawDaily {
 
 /** Bump when the requested variables change so old cache files aren't reused. */
 const CACHE_VERSION = 'v2';
+/** Observed data has its own version: v3 starts in 1985 instead of 1995. */
+const OBSERVED_CACHE_VERSION = 'v3';
 const DAILY_VARS = 'temperature_2m_max,temperature_2m_min,precipitation_sum';
 
 export function cacheKey(kind: 'observed' | 'models', lat: number, lon: number): string {
-  return `${CACHE_VERSION}_${kind}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
+  return `${kind === 'observed' ? OBSERVED_CACHE_VERSION : CACHE_VERSION}_${kind}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
 }
 
 async function readCache(key: string): Promise<RawDaily | null> {
