@@ -11,7 +11,11 @@ import { z } from "zod";
 import { AU_BOUNDS } from "../shared/regions";
 import type { ClimateAnalysis } from "../shared/types";
 import { RateLimitedError } from "./openMeteo";
-import { analyseLocation, DataUnavailableError, latestWinter } from "./analysis";
+import {
+  analyseLocation,
+  DataUnavailableError,
+  latestWinter,
+} from "./analysis";
 import { AiUnavailableError, diagnosePhoto, explainResult } from "./gemini";
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -135,7 +139,11 @@ app.get("/api/geocode", climateLimiter, async (req, res) => {
     if (!upstream.ok) throw new Error(`geocode ${upstream.status}`);
     raw = (await upstream.json()) as { results?: GeocodeHit[] };
   } catch {
-    res.status(502).json({ error: "Place search is unavailable right now. Try again in a minute." });
+    res
+      .status(502)
+      .json({
+        error: "Place search is unavailable right now. Try again in a minute.",
+      });
     return;
   }
 
@@ -219,7 +227,12 @@ app.post("/api/explain", aiLimiter, async (req, res) => {
       .json({ error: "Run the analysis and pick at least one option first." });
     return;
   }
-  const text = await explainResult(body.data.analysis, body.data.crops, body.data.grownHere, body.data.water);
+  const text = await explainResult(
+    body.data.analysis,
+    body.data.crops,
+    body.data.grownHere,
+    body.data.water,
+  );
   res.json({ text });
 });
 
@@ -261,12 +274,16 @@ if (isProd) {
 
 // Express 5 forwards rejected promises from async handlers here.
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  if (err instanceof AiUnavailableError) {
+  if (err instanceof AiBusyError) {
     res
       .status(503)
-      .json({
-        error: "AI features are switched off on this server (no Gemini key).",
-      });
+      .json({ error: "The AI is busy right now. Try again in a few seconds." });
+    return;
+  }
+  if (err instanceof AiUnavailableError) {
+    res.status(503).json({
+      error: "AI features are switched off on this server (no Gemini key).",
+    });
     return;
   }
   if (err instanceof DataUnavailableError) {
@@ -274,22 +291,24 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     return;
   }
   if (err instanceof RateLimitedError) {
-    const wait = { minute: "a minute", hour: "an hour", day: "a few hours" }[err.window];
+    const wait = { minute: "a minute", hour: "an hour", day: "a few hours" }[
+      err.window
+    ];
     res
       .status(503)
-      .setHeader("Retry-After", { minute: "60", hour: "3600", day: "14400" }[err.window])
+      .setHeader(
+        "Retry-After",
+        { minute: "60", hour: "3600", day: "14400" }[err.window],
+      )
       .json({
         error: `The free climate data service is busy, so new locations can't load right now. Try again in ${wait}. The preset districts still work.`,
       });
     return;
   }
   console.error("[api]", err);
-  res
-    .status(502)
-    .json({
-      error:
-        "The climate or AI service did not respond. Try again in a minute.",
-    });
+  res.status(502).json({
+    error: "The climate or AI service did not respond. Try again in a minute.",
+  });
 });
 
 const server = app.listen(PORT, () => {

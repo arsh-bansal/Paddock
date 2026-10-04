@@ -3,9 +3,55 @@ import { z } from 'zod';
 import type { ClimateAnalysis, CropEvaluation, StressDiagnosis } from '../shared/types';
 
 const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+/**
+ * Used for the final retry when the main model keeps answering "high demand" (503): a lighter
+ * model is usually less congested, and a simpler answer beats an error.
+ */
+const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || 'gemini-flash-lite-latest';
 let client: GoogleGenAI | null = null;
 
 export class AiUnavailableError extends Error {}
+/** Gemini was busy, rate-limited or returned something unusable after retries. */
+export class AiBusyError extends Error {}
+
+/** Transient Gemini failures worth retrying: rate limits, overload, server errors, empty or malformed replies. */
+function isRetryable(err: unknown): boolean {
+  if (err instanceof AiUnavailableError) return false;
+  const e = err as { status?: number; code?: number; message?: string };
+  const status = e?.status ?? e?.code;
+  if (typeof status === 'number' && (status === 429 || status >= 500)) return true;
+  const msg = String(e?.message ?? '').toLowerCase();
+  return (
+    err instanceof SyntaxError ||
+    err instanceof EmptyReplyError ||
+    /overloaded|unavailable|resource_exhausted|rate limit|deadline|timeout|fetch failed|econnreset/.test(msg)
+  );
+}
+
+class EmptyReplyError extends Error {}
+
+/**
+ * Call Gemini with up to 2 retries (0.8 s, then 2 s) on transient failures. Gemini regularly
+ * answers "overloaded" or "too many requests" for a moment, which used to fail the whole request.
+ */
+async function withRetry<T>(label: string, fn: (model: string) => Promise<T>): Promise<T> {
+  const delays = [800, 2000];
+  for (let attempt = 0; ; attempt++) {
+    // Main model first; the last attempt falls back to the lighter model.
+    const model = attempt === delays.length && FALLBACK_MODEL !== MODEL ? FALLBACK_MODEL : MODEL;
+    try {
+      return await fn(model);
+    } catch (err) {
+      if (!isRetryable(err)) throw err;
+      if (attempt >= delays.length) {
+        console.error(`[gemini] ${label} failed after ${attempt + 1} attempts:`, (err as Error).message);
+        throw new AiBusyError('The AI is busy right now.');
+      }
+      console.warn(`[gemini] ${label} attempt ${attempt + 1} (${model}) failed: ${String((err as Error).message).slice(0, 160)}; retrying`);
+      await new Promise((r) => setTimeout(r, delays[attempt]));
+    }
+  }
+}
 
 function ai(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -82,12 +128,15 @@ export async function explainResult(
     })),
   };
 
+  return withRetry('summary', async (model) => {
   const res = await ai().models.generateContent({
-    model: MODEL,
+    model,
     contents: `Facts (JSON):\n${JSON.stringify(facts, null, 2)}`,
     config: {
       temperature: 0.3,
-      maxOutputTokens: 600,
+      // Newer Gemini models "think" before writing and that counts against this limit; 600 was
+      // sometimes used up entirely, leaving an empty reply. Length is kept short by the instructions.
+      maxOutputTokens: 4096,
       systemInstruction: [
         'You write short briefs for Australian orchardists deciding what to plant on a block that will crop for the next 20 years.',
         'Use plain Australian English, as if talking to the grower over the fence. No headings, no bullet points, no markdown.',
@@ -100,18 +149,27 @@ export async function explainResult(
     },
   });
   const text = res.text?.trim();
-  if (!text) throw new Error('Empty response from Gemini.');
+  if (!text) throw new EmptyReplyError('Empty response from Gemini.');
   return text;
+  });
 }
 
+const CATEGORIES = ['heat', 'water', 'pest', 'disease', 'nutrient', 'healthy', 'unclear'] as const;
+const clip = (max: number) => z.string().transform((v) => (v.length > max ? `${v.slice(0, max - 1).trimEnd()}…` : v));
+
+/**
+ * Lenient on shape, strict on meaning: extra list items are dropped and long text is trimmed
+ * rather than rejecting a good answer (Gemini sometimes returns 6 signs or a long sentence).
+ * Anything it can't use falls back to the cautious option.
+ */
 const diagnosisSchema = z.object({
-  likelyIssue: z.string().min(1).max(200),
-  category: z.enum(['heat', 'water', 'pest', 'disease', 'nutrient', 'healthy', 'unclear']),
-  confidence: z.enum(['low', 'medium', 'high']),
-  signs: z.array(z.string().max(200)).max(5),
-  actions: z.array(z.string().max(240)).max(4),
-  climateLink: z.string().max(300),
-  seeAdvisor: z.boolean(),
+  likelyIssue: clip(200).pipe(z.string().min(1)),
+  category: z.string().transform((v) => ((CATEGORIES as readonly string[]).includes(v.toLowerCase()) ? v.toLowerCase() : 'unclear') as (typeof CATEGORIES)[number]),
+  confidence: z.string().transform((v) => (['low', 'medium', 'high'].includes(v.toLowerCase()) ? v.toLowerCase() : 'low') as 'low' | 'medium' | 'high'),
+  signs: z.array(clip(200)).default([]).transform((a) => a.slice(0, 5)),
+  actions: z.array(clip(240)).default([]).transform((a) => a.slice(0, 4)),
+  climateLink: clip(300).default(''),
+  seeAdvisor: z.boolean().default(true),
 });
 
 const diagnosisJsonSchema = {
@@ -129,8 +187,9 @@ const diagnosisJsonSchema = {
 } as const;
 
 export async function diagnosePhoto(imageBase64: string, mimeType: string, crop?: string): Promise<StressDiagnosis> {
+  return withRetry('photo check', async (model) => {
   const res = await ai().models.generateContent({
-    model: MODEL,
+    model,
     contents: [
       {
         role: 'user',
@@ -153,7 +212,12 @@ export async function diagnosePhoto(imageBase64: string, mimeType: string, crop?
       ].join('\n'),
     },
   });
-  const parsed = diagnosisSchema.safeParse(JSON.parse(res.text ?? '{}'));
-  if (!parsed.success) throw new Error('Gemini returned an unexpected diagnosis format.');
+  const text = res.text?.trim();
+  if (!text) throw new EmptyReplyError('Empty response from Gemini.');
+  // A malformed reply (SyntaxError) or one we can't use is retried like a busy error.
+  const parsed = diagnosisSchema.safeParse(JSON.parse(text));
+  if (!parsed.success) throw new SyntaxError(`Unusable diagnosis: ${parsed.error.issues[0]?.message ?? 'bad shape'}`);
   return parsed.data;
+  });
 }
+

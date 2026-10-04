@@ -65,3 +65,17 @@ use a paid instance or open the link a few minutes before presenting.
   capped at 20 locations.
 - Shuts down cleanly on `SIGTERM` (finishes in-flight requests, force-exits after 10 s).
 - Rate limits: 30 climate requests and 12 AI requests per minute per visitor.
+
+## Gemini reliability
+
+Gemini sometimes answers `503 UNAVAILABLE: This model is currently experiencing high demand`. The
+server retries twice (after 0.8 s and 2 s), and the last try uses a lighter model
+(`GEMINI_FALLBACK_MODEL`, default `gemini-flash-lite-latest`). Over-long or slightly malformed replies
+are trimmed rather than rejected, and empty replies are retried. If it still fails, the app says "The
+AI is busy right now. Try again in a few seconds." Check what happened with:
+
+```bash
+gcloud run services logs read paddock --region australia-southeast2 --limit 50 | grep -i gemini
+```
+
+Keys on a paid (billing-enabled) tier are generally prioritised over free-tier keys under load.
