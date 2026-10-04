@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { CropCatalogue } from "./components/CropCatalogue";
 import { Planner } from "./components/Planner";
+import { StoryPage } from "./components/StoryPage";
 import { StressCheck } from "./components/StressCheck";
 
-type View = "planner" | "stress" | "crops";
+type View = "story" | "planner" | "stress" | "crops";
 
 export default function App() {
-  const [view, setView] = useState<View>("planner");
+  const [view, setView] = useState<View>("story");
   const [aiEnabled, setAiEnabled] = useState(false);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function App() {
           aria-label="Tools"
           className="flex gap-1 rounded-xl bg-card p-1 shadow-[0_0_0_1px_var(--color-line)]"
         >
+          {tab("story", "Why Paddock")}
           {tab("planner", "Replant planner")}
           {tab("stress", "Check a tree")}
           {tab("crops", "Crop data")}
@@ -46,6 +48,14 @@ export default function App() {
       </header>
 
       <main>
+        <div id="panel-story" role="tabpanel" aria-labelledby="tab-story" hidden={view !== "story"}>
+          <StoryPage
+            onStart={() => {
+              setView("planner");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
+        </div>
         <div
           id="panel-planner"
           role="tabpanel"
