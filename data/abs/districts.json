@@ -1,0 +1,72 @@
+{
+  "_readme": "Which ABS Statistical Areas (SA2, ASGS Edition 3) make up each preset district. Used by scripts/import-abs-region-crops.ts. Chosen as the rural SA2s around each preset town; urban SA2s (e.g. Shepparton - North) are left out because they hold almost no orchards. `lga` is the Local Government Area used for the water-use figures (scripts/import-abs-water.ts), which ABS publishes by LGA rather than SA2.",
+  "districts": [
+    {
+      "presetId": "shepparton",
+      "name": "the Goulburn Valley around Shepparton",
+      "sa2": {
+        "216031418": "Shepparton Surrounds - East",
+        "216031419": "Shepparton Surrounds - West",
+        "216031415": "Mooroopna"
+      },
+      "lga": {
+        "22830": "Greater Shepparton"
+      }
+    },
+    {
+      "presetId": "cobram",
+      "name": "the Goulburn Valley around Cobram",
+      "sa2": {
+        "216021411": "Cobram",
+        "216021412": "Moira"
+      },
+      "lga": {
+        "24900": "Moira"
+      }
+    },
+    {
+      "presetId": "harcourt",
+      "name": "the Harcourt district",
+      "sa2": {
+        "202021028": "Castlemaine Surrounds"
+      },
+      "lga": {
+        "25430": "Mount Alexander"
+      }
+    },
+    {
+      "presetId": "wandin",
+      "name": "the Yarra Valley around Wandin",
+      "sa2": {
+        "211051285": "Wandin - Seville",
+        "211051279": "Monbulk - Silvan",
+        "211051286": "Yarra Valley"
+      },
+      "lga": {
+        "27450": "Yarra Ranges"
+      }
+    },
+    {
+      "presetId": "bacchus-marsh",
+      "name": "the Bacchus Marsh district",
+      "sa2": {
+        "201021009": "Bacchus Marsh Surrounds",
+        "213041353": "Bacchus Marsh"
+      },
+      "lga": {
+        "25150": "Moorabool"
+      }
+    },
+    {
+      "presetId": "swan-hill",
+      "name": "the Swan Hill district",
+      "sa2": {
+        "215031404": "Swan Hill",
+        "215031405": "Swan Hill Surrounds"
+      },
+      "lga": {
+        "26610": "Swan Hill"
+      }
+    }
+  ]
+}

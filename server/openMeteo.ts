@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { DailyTemp } from '../shared/chill';
+import type { DailyWeather } from '../shared/chill';
 import { FUTURE_PERIOD, OBSERVED_PERIOD, BASELINE_PERIOD } from '../shared/types';
 
 /**
@@ -13,37 +13,90 @@ const CLIMATE_URL = 'https://climate-api.open-meteo.com/v1/climate';
 
 export const CLIMATE_MODELS = ['EC_Earth3P_HR', 'MPI_ESM1_2_XR', 'MRI_AGCM3_2_S'] as const;
 
-const CACHE_DIR = path.resolve(process.cwd(), 'data', 'cache');
+/**
+ * Two places climate data is kept:
+ *  - data/snapshot/  Preset districts, COMMITTED so the app and the demo work offline. Read-only
+ *                    at runtime; written only by `npm run snapshot`.
+ *  - data/cache/     Any other location someone checks. Git-ignored and disposable (on a hosted
+ *                    server it lives on the instance's temporary disk). Override with PADDOCK_CACHE_DIR.
+ */
+const SNAPSHOT_DIR = path.resolve(process.cwd(), 'data', 'snapshot');
+const CACHE_DIR = path.resolve(process.env.PADDOCK_CACHE_DIR || path.join(process.cwd(), 'data', 'cache'));
+let writeDir = CACHE_DIR;
+
+/** Used by scripts/snapshot.ts so fetched preset data lands in the committed snapshot folder. */
+export function writeToSnapshot(): void {
+  writeDir = SNAPSHOT_DIR;
+}
+
+/**
+ * Small in-memory LRU on top of the files. Each location is a few MB of daily data, so an
+ * unbounded map would eventually exhaust memory on a public server.
+ */
+const MAX_MEMORY_ENTRIES = 40; // two entries (observed + models) per location
 const memoryCache = new Map<string, unknown>();
+function remember(key: string, value: unknown): void {
+  memoryCache.delete(key);
+  memoryCache.set(key, value);
+  while (memoryCache.size > MAX_MEMORY_ENTRIES) memoryCache.delete(memoryCache.keys().next().value as string);
+}
 
 export interface RawDaily {
   elevation?: number;
   daily: Record<string, (number | null)[]> & { time: string[] };
 }
 
+/** Bump when the requested variables change so old cache files aren't reused. */
+const CACHE_VERSION = 'v2';
+/** Observed data has its own version: v3 starts in 1985 instead of 1995. */
+const OBSERVED_CACHE_VERSION = 'v3';
+const DAILY_VARS = 'temperature_2m_max,temperature_2m_min,precipitation_sum';
+
 export function cacheKey(kind: 'observed' | 'models', lat: number, lon: number): string {
-  return `${kind}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
+  return `${kind === 'observed' ? OBSERVED_CACHE_VERSION : CACHE_VERSION}_${kind}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
 }
 
 async function readCache(key: string): Promise<RawDaily | null> {
-  if (memoryCache.has(key)) return memoryCache.get(key) as RawDaily;
-  try {
-    const raw = JSON.parse(await readFile(path.join(CACHE_DIR, `${key}.json`), 'utf8')) as RawDaily;
-    memoryCache.set(key, raw);
-    return raw;
-  } catch {
-    return null;
+  if (memoryCache.has(key)) {
+    const hit = memoryCache.get(key) as RawDaily;
+    remember(key, hit); // mark as recently used
+    return hit;
   }
+  for (const dir of [SNAPSHOT_DIR, CACHE_DIR]) {
+    try {
+      const raw = JSON.parse(await readFile(path.join(dir, `${key}.json`), 'utf8')) as RawDaily;
+      remember(key, raw);
+      return raw;
+    } catch {
+      // not in this folder; try the next
+    }
+  }
+  return null;
 }
 
 async function writeCache(key: string, value: RawDaily): Promise<void> {
-  memoryCache.set(key, value);
+  remember(key, value);
   try {
-    await mkdir(CACHE_DIR, { recursive: true });
-    await writeFile(path.join(CACHE_DIR, `${key}.json`), JSON.stringify(value));
+    await mkdir(writeDir, { recursive: true });
+    await writeFile(path.join(writeDir, `${key}.json`), JSON.stringify(value));
   } catch (err) {
     console.warn(`[cache] could not persist ${key}:`, (err as Error).message);
   }
+}
+
+/** Open-Meteo's free tier has per-minute, hourly and daily request limits. */
+export class RateLimitedError extends Error {
+  constructor(readonly window: 'minute' | 'hour' | 'day') {
+    super(`Open-Meteo ${window} request limit exceeded`);
+  }
+}
+
+export function rateLimitWindow(status: number, reason: string | undefined): RateLimitedError['window'] | null {
+  const r = (reason ?? '').toLowerCase();
+  if (r.includes('hourly')) return 'hour';
+  if (r.includes('daily')) return 'day';
+  if (status === 429 || r.includes('limit exceeded')) return 'minute';
+  return null;
 }
 
 async function fetchJson(url: string, attempts = 2): Promise<RawDaily> {
@@ -52,9 +105,13 @@ async function fetchJson(url: string, attempts = 2): Promise<RawDaily> {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
       const body = (await res.json()) as RawDaily & { error?: boolean; reason?: string };
+      const limited = rateLimitWindow(res.status, body.reason);
+      if (limited) throw new RateLimitedError(limited);
       if (!res.ok || body.error) throw new Error(body.reason ?? `Open-Meteo responded ${res.status}`);
       return body;
     } catch (err) {
+      // Retrying straight away only burns more of the quota.
+      if (err instanceof RateLimitedError) throw err;
       lastErr = err;
       if (i < attempts - 1) await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
     }
@@ -76,10 +133,32 @@ export async function getObserved(lat: number, lon: number) {
     longitude: String(lon),
     start_date: `${OBSERVED_PERIOD[0]}-01-01`,
     end_date: `${OBSERVED_PERIOD[1]}-12-31`,
-    daily: 'temperature_2m_max,temperature_2m_min',
+    daily: DAILY_VARS,
     timezone: 'auto',
   });
   return cached(cacheKey('observed', lat, lon), `${ARCHIVE_URL}?${params}`);
+}
+
+/**
+ * The most recent winter (1 April to 30 September) that the reanalysis archive covers. ERA5 lags
+ * real time by a few days, so a winter counts once early October has passed.
+ */
+export function latestWinterYear(today = new Date()): number {
+  const y = today.getUTCFullYear();
+  const covered = today.getTime() >= Date.UTC(y, 9, 3); // 3 October
+  return covered ? y : y - 1;
+}
+
+export async function getWinter(lat: number, lon: number, year: number) {
+  const params = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lon),
+    start_date: `${year}-04-01`,
+    end_date: `${year}-09-30`,
+    daily: DAILY_VARS,
+    timezone: 'auto',
+  });
+  return cached(`v1_winter${year}_${lat.toFixed(2)}_${lon.toFixed(2)}`, `${ARCHIVE_URL}?${params}`);
 }
 
 export async function getModels(lat: number, lon: number) {
@@ -89,16 +168,17 @@ export async function getModels(lat: number, lon: number) {
     start_date: `${BASELINE_PERIOD[0]}-01-01`,
     end_date: `${FUTURE_PERIOD[1]}-12-31`,
     models: CLIMATE_MODELS.join(','),
-    daily: 'temperature_2m_max,temperature_2m_min',
+    daily: DAILY_VARS,
   });
   return cached(cacheKey('models', lat, lon), `${CLIMATE_URL}?${params}`);
 }
 
 /**
- * Pull one model's tmin/tmax series out of an Open-Meteo daily block.
+ * Pull one model's daily series out of an Open-Meteo daily block.
  * Multi-model responses suffix each variable with the model name; single-series responses don't.
+ * Rainfall is optional: a missing rainfall variable gives precip = null rather than failing.
  */
-export function toDailyTemps(raw: RawDaily, model?: string): DailyTemp[] | null {
+export function toDailyWeather(raw: RawDaily, model?: string): DailyWeather[] | null {
   const d = raw.daily;
   if (!d?.time) return null;
   const hasSuffixed = Object.keys(d).some((k) => CLIMATE_MODELS.some((m) => k.endsWith(`_${m}`)));
@@ -108,13 +188,15 @@ export function toDailyTemps(raw: RawDaily, model?: string): DailyTemp[] | null 
 
   const tmax = d[key('temperature_2m_max')];
   const tmin = d[key('temperature_2m_min')];
+  const precip = d[key('precipitation_sum')];
   if (!tmax || !tmin) return null;
-  const out: DailyTemp[] = [];
+  const out: DailyWeather[] = [];
   d.time.forEach((date, i) => {
     const lo = tmin[i];
     const hi = tmax[i];
     if (lo == null || hi == null) return;
-    out.push({ date, tmin: lo, tmax: hi });
+    const p = precip?.[i];
+    out.push({ date, tmin: lo, tmax: hi, precip: p == null ? null : p });
   });
   return out.length ? out : null;
 }

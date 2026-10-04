@@ -1,14 +1,23 @@
-import type { ClimateAnalysis, OptionEvaluation, StressDiagnosis } from '../../shared/types';
+import type {
+  ClimateAnalysis,
+  CropEvaluation,
+  StressDiagnosis,
+} from "../../shared/types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, init);
   } catch {
-    throw new Error('Could not reach the Paddock server. Check your connection and try again.');
+    throw new Error(
+      "Could not reach the Paddock server. Check your connection and try again.",
+    );
   }
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((body as { error?: string }).error ?? `Request failed (${res.status}).`);
+  if (!res.ok)
+    throw new Error(
+      (body as { error?: string }).error ?? `Request failed (${res.status}).`,
+    );
   return body as T;
 }
 
@@ -17,31 +26,65 @@ export function fetchClimate(lat: number, lon: number, label: string) {
   return request<ClimateAnalysis>(`/api/climate?${q}`);
 }
 
-export function fetchBrief(analysis: ClimateAnalysis, options: OptionEvaluation[]) {
-  return request<{ text: string }>('/api/explain', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ analysis, options }),
+export interface PlaceSuggestion {
+  id: number;
+  name: string;
+  label: string;
+  lat: number;
+  lon: number;
+  admin1: string | null;
+}
+
+export function searchPlaces(query: string, state?: string) {
+  const q = new URLSearchParams({ q: query });
+  if (state) q.set("state", state);
+  return request<{ results: PlaceSuggestion[] }>(`/api/geocode?${q}`);
+}
+
+export interface WaterFacts {
+  orchardIrrigationMlPerHa: number | null;
+  shortfallChangeMm: number;
+  extraMlPerHa: number;
+  extraShareOfToday: number | null;
+}
+
+export function fetchBrief(analysis: ClimateAnalysis, crops: CropEvaluation[], grownHere: string[] = [], water: WaterFacts | null = null) {
+  return request<{ text: string }>("/api/explain", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ analysis, crops, grownHere, water }),
   });
 }
 
 export function fetchDiagnosis(image: string, mimeType: string, crop?: string) {
-  return request<StressDiagnosis>('/api/diagnose', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return request<StressDiagnosis>("/api/diagnose", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ image, mimeType, crop }),
   });
 }
 
 /** Downscale a photo in the browser so uploads are fast on rural mobile connections. */
-export async function prepareImage(file: File, maxSide = 1280): Promise<{ base64: string; mimeType: string; preview: string }> {
+export async function prepareImage(
+  file: File,
+  maxSide = 1280,
+): Promise<{ base64: string; mimeType: string; preview: string }> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-  return { base64: dataUrl.split(',')[1], mimeType: 'image/jpeg', preview: dataUrl };
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+  return {
+    base64: dataUrl.split(",")[1],
+    mimeType: "image/jpeg",
+    preview: dataUrl,
+  };
+}
+
+export function fetchLatestWinter(lat: number, lon: number) {
+  const q = new URLSearchParams({ lat: String(lat), lon: String(lon) });
+  return request<import("../../shared/caseStudy").LatestWinter>(`/api/latest-winter?${q}`);
 }

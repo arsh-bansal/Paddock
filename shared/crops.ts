@@ -1,114 +1,224 @@
 /**
- * Crop options and chill requirements.
+ * Crop database loader.
  *
- * IMPORTANT — DATA CREDIBILITY:
- * These ranges are INDICATIVE chill-hour classes (Weinberger 0–7.2 °C model) for each crop type,
- * not cultivar-specific figures. Chill requirements vary a lot between cultivars and between
- * published sources. Before demo day, replace `chillHours` with sourced figures (nursery
- * catalogues, Agriculture Victoria, Hort Innovation reports) and fill in `source`.
- * Growers can also type their cultivar's exact requirement into the app.
+ * The crop catalogue now lives as data in `shared/crops.data.json` — adding or editing a crop is a
+ * data edit, not a code change. This module imports that JSON at build time, validates it with zod
+ * (throwing loudly on bad data so a broken catalogue can never be served silently), and re-exports
+ * the unchanged public API: the `CropOption`/`Sourced` interfaces, the `CROP_OPTIONS` constant, and
+ * the `cropLabel` / `defaultRequirement` / `hasIndicativeData` helpers.
+ *
+ * DATA CREDIBILITY. Each per-season block carries a `Sourced { indicative, source }` wrapper. When
+ * `indicative` is true the threshold is a rule-of-thumb placeholder still being replaced with a
+ * sourced figure; the UI badges those. Per-field sourcing rationale lives in
+ * `docs/crop-data-sources.md`, the canonical data contract.
+ *
+ * RUNTIME NOTE. `shared/` is consumed by Vite, the esbuild server bundle, tsx and vitest, so this
+ * module uses no Node-only APIs. The JSON is a static build-time import, inlined by every bundler;
+ * `CROP_OPTIONS` is therefore synchronously available (used at render time by the planner/picker).
  */
+import { z } from 'zod';
+import { CONVERSION_SOURCE, hoursToPortions, portionsToHours } from './chillConversion';
+import rawCrops from './crops.data.json';
+
+export interface Sourced {
+  /** true while the value is a placeholder, not a sourced figure */
+  indicative: boolean;
+  /** citation or URL; empty while indicative */
+  source: string;
+}
+
+export const CROP_CATEGORIES = ['stone fruit', 'pome fruit', 'cherry', 'nut', 'vine', 'berry'] as const;
+export type CropCategory = (typeof CROP_CATEGORIES)[number];
+
+export type WinterRequirement = Sourced & {
+  /** chill-hour range (Weinberger 0–7.2 °C model), shown to growers */
+  chillHours: [number, number];
+  /** true when chillHours was converted from chillPortions rather than sourced directly */
+  hoursDerived: boolean;
+  /** chill-portion range (Dynamic Model). THIS is what winter is scored on. */
+  chillPortions: [number, number];
+  /** true when chillPortions was converted from chillHours rather than sourced directly */
+  portionsDerived: boolean;
+  /** where chillPortions came from */
+  portionsSource: string;
+};
 
 export interface CropOption {
   id: string;
   crop: string;
   type: string;
-  /** Indicative chill-hour range for this class [low, high] */
-  chillHours: [number, number];
-  /** Heat-related risk worth flagging for this crop (general, non-numeric) */
+  category: CropCategory;
+  /**
+   * Winter chill requirement, or null when no chill figure fits our model for this crop (e.g.
+   * grapevines). A null winter is reported as "not scored" and never drives the verdict.
+   */
+  winter: WinterRequirement | null;
+  spring:
+    | (Sourced & {
+        /** months (1–12) when the crop is usually flowering in Victoria */
+        floweringMonths: number[];
+        /** minimum temperature (°C) at which open flowers are damaged */
+        frostDamageC: number;
+      })
+    | null;
+  summer:
+    | (Sourced & {
+        /** days ≥35 °C per summer the crop handles before heat risk climbs */
+        hotDaysTolerated: number;
+      })
+    | null;
+  /** Plain-language heat risk, shown with results */
   heatNote: string;
-  /** Where the range came from. Empty string = not yet sourced. */
-  source: string;
+  /**
+   * Years from planting to the first worthwhile crop and to full production, [earliest, latest].
+   * fullCropYears null when no source gives it. Absent for user-added crops.
+   */
+  bearing?: (Sourced & { firstCropYears: [number, number]; fullCropYears: [number, number] | null }) | null;
 }
 
-export const CROP_OPTIONS: CropOption[] = [
-  {
-    id: 'peach-standard',
-    crop: 'Peach / nectarine',
-    type: 'Standard-chill varieties',
-    chillHours: [600, 900],
-    heatNote: 'Very hot days during fruit development can reduce fruit size and quality.',
-    source: '',
-  },
-  {
-    id: 'peach-low',
-    crop: 'Peach / nectarine',
-    type: 'Low-chill varieties',
-    chillHours: [200, 400],
-    heatNote: 'Low-chill types can flower early, which raises spring frost exposure.',
-    source: '',
-  },
-  {
-    id: 'apricot',
-    crop: 'Apricot',
-    type: 'Standard varieties',
-    chillHours: [500, 900],
-    heatNote: 'Heat during flowering and fruit set can reduce set.',
-    source: '',
-  },
-  {
-    id: 'plum-japanese',
-    crop: 'Plum',
-    type: 'Japanese types',
-    chillHours: [400, 800],
-    heatNote: 'Generally more heat tolerant than European plums.',
-    source: '',
-  },
-  {
-    id: 'plum-european',
-    crop: 'Plum',
-    type: 'European / prune types',
-    chillHours: [800, 1100],
-    heatNote: 'Higher chill need makes these the first to struggle as winters warm.',
-    source: '',
-  },
-  {
-    id: 'cherry-standard',
-    crop: 'Sweet cherry',
-    type: 'Standard varieties',
-    chillHours: [800, 1200],
-    heatNote: 'Hot weather around flowering and fruit set is a key risk, and hot summers can cause doubled fruit the next season.',
-    source: '',
-  },
-  {
-    id: 'cherry-low',
-    crop: 'Sweet cherry',
-    type: 'Low-chill varieties',
-    chillHours: [300, 500],
-    heatNote: 'Newer low-chill lines; check local trial results before committing.',
-    source: '',
-  },
-  {
-    id: 'apple-mainstream',
-    crop: 'Apple',
-    type: 'Mainstream varieties',
-    chillHours: [600, 1000],
-    heatNote: 'Fruit sunburn risk rises with more days at or above 35 °C; netting is common.',
-    source: '',
-  },
-  {
-    id: 'apple-low',
-    crop: 'Apple',
-    type: 'Low-chill varieties',
-    chillHours: [200, 400],
-    heatNote: 'Same sunburn exposure as other apples; market demand may differ.',
-    source: '',
-  },
-  {
-    id: 'pear',
-    crop: 'European pear',
-    type: 'Standard varieties',
-    chillHours: [700, 1100],
-    heatNote: 'Heat stress and sunburn risk in hot summers.',
-    source: '',
-  },
-];
+/**
+ * Heat-sensitivity bands → days ≥35 °C tolerated. Mirrors the legacy `HEAT` constants so authors
+ * can write a keyword in the JSON instead of a magic number; the loader expands it.
+ */
+const HEAT = { high: 5, medium: 10, low: 15 } as const;
 
+/** Per-season credibility wrapper. `source` is optional in the JSON and defaults to ''. */
+const sourced = z.object({
+  indicative: z.boolean(),
+  source: z.string().default(''),
+});
+
+const cropSchema = z.object({
+  id: z.string().regex(/^[a-z0-9-]+$/, 'id must be lowercase alphanumeric/hyphen').max(60),
+  crop: z.string().min(1),
+  type: z.string().min(1),
+  category: z.enum(CROP_CATEGORIES),
+  heatNote: z.string().min(1).max(300),
+  // Give chillHours, chillPortions, or both. Whichever is missing is converted from the other
+  // (Brunt et al. 2017, Table 1) and flagged. null = no chill figure fits our model for this crop.
+  winter: sourced
+    .extend({
+      chillHours: z
+        .tuple([z.number().int().nonnegative(), z.number().int().nonnegative()])
+        .refine(([lo, hi]) => lo <= hi, 'chillHours must be [min, max] with min <= max')
+        .optional(),
+      chillPortions: z
+        .tuple([z.number().nonnegative(), z.number().nonnegative()])
+        .refine(([lo, hi]) => lo <= hi, 'chillPortions must be [min, max] with min <= max')
+        .optional(),
+      portionsSource: z.string().optional(),
+    })
+    .refine((w) => Boolean(w.chillHours || w.chillPortions), 'winter needs chillHours or chillPortions (or set winter to null)')
+    .refine((w) => !w.chillPortions || Boolean(w.portionsSource), 'chillPortions needs a portionsSource')
+    .nullable(),
+  spring: sourced
+    .extend({
+      floweringMonths: z.array(z.number().int().min(1).max(12)).min(1),
+      frostDamageC: z.number(),
+    })
+    .nullable(),
+  summer: sourced
+    .extend({
+      // A positive int, or a band keyword expanded to the legacy HEAT numbers.
+      hotDaysTolerated: z.union([
+        z.number().int().positive(),
+        z.enum(['high', 'medium', 'low']).transform((k) => HEAT[k]),
+      ]),
+    })
+    .nullable(),
+  bearing: sourced
+    .extend({
+      firstCropYears: z
+        .tuple([z.number().int().min(1).max(20), z.number().int().min(1).max(20)])
+        .refine(([lo, hi]) => lo <= hi, 'firstCropYears must be [min, max]'),
+      fullCropYears: z
+        .tuple([z.number().int().min(1).max(30), z.number().int().min(1).max(30)])
+        .refine(([lo, hi]) => lo <= hi, 'fullCropYears must be [min, max]')
+        .nullable(),
+    })
+    .refine((b) => !b.fullCropYears || b.fullCropYears[0] >= b.firstCropYears[0], 'full crop can’t come before first crop')
+    .refine((b) => b.source.trim().length > 0, 'bearing needs a source')
+    .nullable()
+    .optional(),
+});
+
+const cropsSchema = z
+  .array(cropSchema)
+  .min(1)
+  .refine((cs) => new Set(cs.map((c) => c.id)).size === cs.length, 'crop ids must be unique');
+
+/**
+ * Validate once at module load. A `ZodError` here fails the build, tests, server startup and tsx
+ * scripts rather than silently serving a partial catalogue. The validated output is structurally
+ * identical to `CropOption`, so the cast is a formality; we keep the hand-written interfaces as the
+ * public types so no downstream type identity changes. `Object.freeze` guards the read-only singleton.
+ */
+const round1 = (n: number) => Math.round(n * 10) / 10;
+const round10 = (n: number) => Math.round(n / 10) * 10;
+
+type RawWinter = Sourced & { chillHours?: [number, number]; chillPortions?: [number, number]; portionsSource?: string };
+
+/**
+ * Complete a winter requirement: the scoring figure (chill portions) and the grower-facing figure
+ * (chill hours). Whichever wasn't sourced is converted from the other and flagged as derived.
+ */
+export function withPortions(w: RawWinter): WinterRequirement {
+  const { chillHours, chillPortions, portionsSource, ...rest } = w;
+  if (chillPortions) {
+    return {
+      ...rest,
+      chillPortions,
+      portionsDerived: false,
+      portionsSource: portionsSource ?? '',
+      chillHours: chillHours ?? [round10(portionsToHours(chillPortions[0])), round10(portionsToHours(chillPortions[1]))],
+      hoursDerived: !chillHours,
+    };
+  }
+  if (!chillHours) throw new Error('winter needs chillHours or chillPortions');
+  return {
+    ...rest,
+    chillHours,
+    hoursDerived: false,
+    chillPortions: [round1(hoursToPortions(chillHours[0])), round1(hoursToPortions(chillHours[1]))],
+    portionsDerived: true,
+    portionsSource: CONVERSION_SOURCE,
+  };
+}
+
+/**
+ * Validate once at module load. A `ZodError` here fails the build, tests, server startup and tsx
+ * scripts rather than silently serving a partial catalogue. `Object.freeze` guards the singleton.
+ */
+export const CROP_OPTIONS: CropOption[] = Object.freeze(
+  cropsSchema.parse(rawCrops).map((c) => ({ ...c, winter: c.winter ? withPortions(c.winter) : null })),
+) as CropOption[];
+
+/** Words that keep their capital letter inside a label (proper adjectives). */
+const PROPER = /^(Japanese|European|Chinese|Asian|American)\b/;
+
+/** "Plum, Japanese types", "Peach / nectarine, standard-chill varieties". */
 export function cropLabel(c: CropOption): string {
-  return `${c.crop}, ${c.type.toLowerCase()}`;
+  const type = PROPER.test(c.type) ? c.type : c.type.charAt(0).toLowerCase() + c.type.slice(1);
+  return `${c.crop}, ${type}`;
 }
 
-/** Default requirement used for scoring: the middle of the class range. */
+/**
+ * Default chill-HOURS figure shown in the "your variety needs" box: the middle of the class range.
+ * 0 for crops with no winter requirement (the box isn't shown for them).
+ */
 export function defaultRequirement(c: CropOption): number {
-  return Math.round((c.chillHours[0] + c.chillHours[1]) / 2);
+  return c.winter ? Math.round((c.winter.chillHours[0] + c.winter.chillHours[1]) / 2) : 0;
+}
+
+/** Default chill-PORTIONS requirement used for scoring, or null when winter isn't scored. */
+export function defaultPortions(c: CropOption): number | null {
+  return c.winter ? Math.round(((c.winter.chillPortions[0] + c.winter.chillPortions[1]) / 2) * 10) / 10 : null;
+}
+
+export function hasIndicativeData(c: CropOption): boolean {
+  return (
+    Boolean(c.winter && (c.winter.indicative || c.winter.portionsDerived || c.winter.hoursDerived)) ||
+    Boolean(c.spring?.indicative) ||
+    Boolean(c.summer?.indicative)
+  );
 }
