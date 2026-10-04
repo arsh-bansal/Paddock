@@ -1,7 +1,8 @@
 import type { CropOption } from '../../shared/crops';
 import { badYearChance, cashflow, inputsComplete, timelineFor, type FinanceInputs } from '../../shared/finance';
 import type { CropEvaluation } from '../../shared/seasons';
-import { analyseSwitch, compareStaySwitch, stayCashflow, type StayVsSwitch, type SwitchAnalysis } from '../../shared/switching';
+import { analyseSwitch, bestFitsForOther, compareStaySwitch, OTHER_CROP, stayCashflow, stayCashflowFromIncome, type OtherCrop, type StayVsSwitch, type SwitchAnalysis } from '../../shared/switching';
+import { describeGrown, type RegionCrops } from '../../shared/regionCrops';
 
 /* Switching wording shared by the screen and the PDF (ASCII-safe for the PDF fonts). */
 
@@ -53,6 +54,9 @@ export function stayVsSwitchLines(c: StayVsSwitch, current: string, target: stri
 
 export interface SwitchReport {
   current: string;
+  /** True when the current crop isn't in our database (no climate rating) */
+  unscored?: boolean;
+  localNote?: string | null;
   verdict: CropEvaluation['overall'];
   alreadyBest: boolean;
   better: string[];
@@ -68,8 +72,11 @@ export function switchReport(
   crops: CropOption[],
   finance: Record<string, FinanceInputs | undefined>,
   period: readonly [number, number],
+  other?: OtherCrop | null,
+  region?: RegionCrops | null,
 ): SwitchReport | null {
   if (!currentId) return null;
+  if (currentId === OTHER_CROP) return otherReport(other ?? null, compareId, ranked, crops, finance, period, region ?? null);
   const a = analyseSwitch(currentId, ranked, crops);
   if (!a) return null;
   const choices = [...a.sameCrop, ...a.better];
@@ -90,6 +97,66 @@ export function switchReport(
     alreadyBest: a.alreadyBest,
     better: choices.map((c) => c.label),
     paths: switchPaths(a),
+    stayVsSwitch: lines,
+  };
+}
+
+/** Switch routes for something we can't score: grafting doesn't apply. */
+export function otherPaths(): { title: string; text: string }[] {
+  return [
+    { title: 'Replant gradually', text: 'Convert part of the block each year, so your current income keeps coming while new trees establish.' },
+    { title: 'Switch the whole block', text: 'Replant it all at once. Check the new crop’s timeline: there are years with little or no income before it crops.' },
+  ];
+}
+
+/** "About 1 million olive trees grow around here (ABS 2020-21)", when the district list mentions it. */
+export function otherLocalNote(name: string, region: RegionCrops | null): string | null {
+  const q = name.trim().toLowerCase().replace(/s$/, '');
+  if (q.length < 3 || !region) return null;
+  const hit = region.grownToday.find((g) => g.name.toLowerCase().includes(q));
+  const d = hit ? describeGrown(hit) : null;
+  return hit && d ? `${hit.name}: ${d} around here (ABS 2020-21).` : null;
+}
+
+export function otherStayVsSwitchLines(c: StayVsSwitch, name: string, target: string): string[] {
+  const end = c.stay.endYear;
+  return [
+    `By ${end}: staying with ${name.toLowerCase()} about ${money(c.stay.totalByEndRisk)} per hectare; switching now to ${target.toLowerCase()} about ${money(c.switchTo.totalByEndRisk)}, allowing for its climate risk.`,
+    ...stayVsSwitchLines(c, name, target).slice(1),
+    `Staying uses your own income and costs for ${name.toLowerCase()}, with no climate adjustment, because we can’t rate its climate outlook yet.`,
+  ];
+}
+
+function otherReport(
+  other: OtherCrop | null,
+  compareId: string | null,
+  ranked: CropEvaluation[],
+  crops: CropOption[],
+  finance: Record<string, FinanceInputs | undefined>,
+  period: readonly [number, number],
+  region: RegionCrops | null,
+): SwitchReport | null {
+  const name = other?.name.trim();
+  if (!other || !name) return null;
+  const choices = bestFitsForOther(ranked);
+  const target = choices.find((c) => c.id === compareId) ?? choices[0];
+  let lines: string[] | null = null;
+  const fTarget = target ? finance[target.id] : undefined;
+  const targetCrop = target ? crops.find((c) => c.id === target.id) : undefined;
+  const stay = stayCashflowFromIncome(other, period[0], period[1]);
+  if (stay && target && fTarget && targetCrop && inputsComplete(fTarget)) {
+    const t = timelineFor(targetCrop, period[0], fTarget);
+    const sw = t ? cashflow(fTarget, t, period[1], badYearChance(target)) : null;
+    if (sw) lines = otherStayVsSwitchLines(compareStaySwitch(stay, sw), name, target.label);
+  }
+  return {
+    current: name,
+    unscored: true,
+    localNote: otherLocalNote(name, region),
+    verdict: 'no-data',
+    alreadyBest: false,
+    better: choices.map((c) => c.label),
+    paths: otherPaths(),
     stayVsSwitch: lines,
   };
 }

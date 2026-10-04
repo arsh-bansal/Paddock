@@ -62,3 +62,24 @@ describe('stay vs switch', () => {
     expect(compareStaySwitch(stay, sw).catchUpYear).toBeNull();
   });
 });
+
+import { bestFitsForOther, stayCashflowFromIncome } from '../shared/switching';
+
+describe('something else (not in the list)', () => {
+  const ranked = [ev('almond', 'viable'), ev('pear', 'at-risk'), ev('grape', 'no-data'), ev('walnut', 'not-viable')];
+
+  it('suggests only crops that hold up, best first', () => {
+    expect(bestFitsForOther(ranked).map((e) => e.id)).toEqual(['almond', 'pear']);
+  });
+
+  it('stays on the grower’s own income and costs, with no climate adjustment', () => {
+    const stay = stayCashflowFromIncome({ name: 'sheep grazing', incomePerHa: 900, costPerHa: 400 }, 2026, 2045)!;
+    expect(stay.years).toHaveLength(20);
+    expect(stay.totalByEnd).toBe(20 * 500);
+    expect(stay.totalByEndRisk).toBe(stay.totalByEnd);
+  });
+
+  it('needs both income and cost', () => {
+    expect(stayCashflowFromIncome({ name: 'x', incomePerHa: 900, costPerHa: null }, 2026, 2045)).toBeNull();
+  });
+});

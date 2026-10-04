@@ -90,3 +90,41 @@ export function compareStaySwitch(stay: CashFlow, switchTo: CashFlow): StayVsSwi
   }
   return { stay, switchTo, catchUpYear: catchUp, differenceByEnd: switchTo.totalByEndRisk - stay.totalByEndRisk };
 }
+
+/* ---------- Something else: a current crop or enterprise that isn't in the database ---------- */
+
+/** Value used in the "what do you grow now?" picker for anything not in the list. */
+export const OTHER_CROP = '__other__';
+
+export interface OtherCrop {
+  /** What the grower typed, e.g. "olives" or "sheep grazing" */
+  name: string;
+  /** Their current income per hectare per year, $ */
+  incomePerHa: number | null;
+  /** Their current running cost per hectare per year, $ */
+  costPerHa: number | null;
+}
+
+export function emptyOtherCrop(): OtherCrop {
+  return { name: '', incomePerHa: null, costPerHa: null };
+}
+
+/** Crops that hold up well here, for a grower whose current enterprise we can't score. */
+export function bestFitsForOther(ranked: CropEvaluation[], max = 5): CropEvaluation[] {
+  return ranked.filter((e) => e.overall === 'viable' || e.overall === 'at-risk').slice(0, max);
+}
+
+/**
+ * Keeping the current (unscored) enterprise: the grower's own yearly income and cost, no planting
+ * cost and no climate-risk adjustment, since we can't rate its climate outlook.
+ */
+export function stayCashflowFromIncome(other: OtherCrop, plantYear: number, endYear: number): CashFlow | null {
+  if (other.incomePerHa == null || other.costPerHa == null || endYear < plantYear) return null;
+  const years: CashFlow['years'] = [];
+  let cum = 0;
+  for (let year = plantYear; year <= endYear; year++) {
+    cum += other.incomePerHa - other.costPerHa;
+    years.push({ year, yieldShare: 1, cost: other.costPerHa, revenue: other.incomePerHa, revenueRisk: other.incomePerHa, cumulative: cum, cumulativeRisk: cum });
+  }
+  return { years, breakEvenYear: null, breakEvenYearRisk: null, totalByEnd: cum, totalByEndRisk: cum, endYear, badYearChance: 0, riskHaircut: 0 };
+}

@@ -435,18 +435,20 @@ export function ReportDocument({ analysis, crops, brief, region, placeName, note
           <View wrap={false}>
             <Text style={s.h2}>{`Switching from ${switching.current.toLowerCase()}`}</Text>
             <Text style={s.p}>
-              {`What you grow now: ${switching.current}, ${VERDICT[switching.verdict].label.toLowerCase()} through ${period(analysis.future.period)}. ` +
-                (switching.alreadyBest
-                  ? "On climate it's already among the best fits for this block."
-                  : `Holds up better on climate here: ${switching.better.join(", ")}.`)}
+              {switching.unscored
+                ? `What you grow now: ${switching.current}. It isn't in our crop database, so its climate outlook isn't rated. ${switching.localNote ? `${switching.localNote} ` : ""}Holds up well on this block: ${switching.better.join(", ") || "none of the crops we rate"}.`
+                : `What you grow now: ${switching.current}, ${VERDICT[switching.verdict].label.toLowerCase()} through ${period(analysis.future.period)}. ` +
+                  (switching.alreadyBest
+                    ? "On climate it's already among the best fits for this block."
+                    : `Holds up better on climate here: ${switching.better.join(", ")}.`)}
             </Text>
-            <Text style={[s.bold, { marginTop: 6 }]}>Ways to switch, cheapest first</Text>
+            <Text style={[s.bold, { marginTop: 6 }]}>{switching.unscored ? "Ways to switch" : "Ways to switch, cheapest first"}</Text>
             {switching.paths.map((p, n) => (
               <Text key={p.title} style={[s.p, { marginTop: 2 }]}>{`${n + 1}. ${p.title}. ${p.text}`}</Text>
             ))}
             {switching.stayVsSwitch && (
               <View style={{ marginTop: 6, padding: 6, backgroundColor: C.paper, borderRadius: 3 }}>
-                <Text style={[s.bold, { fontSize: 8.5 }]}>Stay or switch (your figures, per hectare, allowing for climate risk)</Text>
+                <Text style={[s.bold, { fontSize: 8.5 }]}>Stay or switch (your figures, per hectare)</Text>
                 {switching.stayVsSwitch.map((l) => (
                   <Text key={l} style={[s.small, { marginTop: 1, color: C.bark }]}>{l}</Text>
                 ))}

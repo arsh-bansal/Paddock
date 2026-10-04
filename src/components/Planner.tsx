@@ -27,6 +27,7 @@ import { Methods } from "./Methods";
 import { SavedReports } from "./SavedReports";
 import { SeasonsPanel } from "./SeasonsPanel";
 import { SwitchPanel } from "./SwitchPanel";
+import { emptyOtherCrop, type OtherCrop } from "../../shared/switching";
 import { WaterPanel } from "./WaterPanel";
 
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
@@ -112,6 +113,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
   const [brief, setBrief] = useState<BriefState | null>(null);
   const [currentCropId, setCurrentCropId] = useState<string | null>(null);
   const [compareCropId, setCompareCropId] = useState<string | null>(null);
+  const [otherCrop, setOtherCrop] = useState<OtherCrop>(emptyOtherCrop);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -253,7 +255,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
     try {
       const loc = location && sameSpot(location, analysis.location) ? location : { ...analysis.location };
       await saveReport(
-        { location: loc, options, analysis, brief: currentBrief ? brief : null, currentCropId },
+        { location: loc, options, analysis, brief: currentBrief ? brief : null, currentCropId, otherCrop },
         { topCrop: topCrop(ranked), cropCount: ranked.length },
       );
       setSavedSignature(`${signature}|${currentBrief ?? ""}`);
@@ -283,6 +285,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
       setAnalysis(r.analysis);
       setBrief(r.brief);
       setCurrentCropId(r.currentCropId ?? null);
+      setOtherCrop(r.otherCrop ?? emptyOtherCrop());
       setCompareCropId(null);
       setError(null);
       const sig = briefSignature(r.analysis, evaluateAll(combined, r.analysis, opts).slice(0, BRIEF_CROP_CAP));
@@ -313,7 +316,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
           region: savedRegion,
           placeName: placeNameFor(r.location, savedRegion),
           notes: cropNotes(savedRanked, combined, financeById(savedOptions), r.analysis.future.period[0], r.analysis.future.period[1]),
-          switching: switchReport(r.currentCropId ?? null, null, savedRanked, combined, financeById(savedOptions), r.analysis.future.period),
+          switching: switchReport(r.currentCropId ?? null, null, savedRanked, combined, financeById(savedOptions), r.analysis.future.period, r.otherCrop ?? null, savedRegion),
         },
         id,
       );
@@ -391,7 +394,7 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
                         region,
                         placeName,
                         notes: cropNotes(ranked, combined, financeById(options), analysis.future.period[0], analysis.future.period[1]),
-                        switching: switchReport(currentCropId, compareCropId, ranked, combined, financeById(options), analysis.future.period),
+                        switching: switchReport(currentCropId, compareCropId, ranked, combined, financeById(options), analysis.future.period, otherCrop, region),
                       },
                       "current",
                     )
@@ -432,6 +435,9 @@ export function Planner({ aiEnabled }: { aiEnabled: boolean }) {
                 varietyFor={varietyFor}
                 financeFor={financeFor}
                 period={analysis.future.period}
+                other={otherCrop}
+                onOther={setOtherCrop}
+                region={region}
               />
 
               <CropResults ranked={ranked} region={region} placeName={placeName} varietyFor={varietyFor} financeFor={financeFor} />

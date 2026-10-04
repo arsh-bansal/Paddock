@@ -2,6 +2,7 @@ import { createStore, del, entries, get, set, type UseStore } from "idb-keyval";
 import type { BriefState } from "../components/Brief";
 import type { PickedLocation } from "../components/LocationPicker";
 import type { OptionState } from "./optionState";
+import type { OtherCrop } from "../../shared/switching";
 import type { ClimateAnalysis } from "../../shared/types";
 
 /**
@@ -23,6 +24,8 @@ export interface SavedReport {
   brief: BriefState | null;
   /** The crop on the block now, if the grower said (optional so older saved reports still load) */
   currentCropId?: string | null;
+  /** What they typed when it's not in the list (with their income and costs) */
+  otherCrop?: OtherCrop;
 }
 
 export interface SavedReportMeta {

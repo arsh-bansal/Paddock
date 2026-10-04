@@ -74,3 +74,13 @@ old trees: the moment a grower can actually change crops.
 The current crop is saved with reports and the PDF gets a "Switching from …" section.
 Code: `shared/switching.ts` (tested in `tests/switching.test.ts`), `src/lib/switchText.ts`,
 `src/components/SwitchPanel.tsx`.
+
+### Something else (not in the list)
+
+For a grower whose current crop or enterprise isn't in the database (olives, citrus, grazing,
+cropping), "Something else" lets them type what it is. Paddock says plainly that it can't rate that
+crop's climate outlook, mentions it if the district's ABS list includes it ("Olives: about 1 million
+trees around here"), and shows what holds up well on the block. Switch routes are replanting
+gradually or switching the whole block (grafting only works within the same kind of fruit). Stay or
+switch uses the grower's own income and running cost per hectare for the current enterprise, with
+no climate adjustment, and says so. Saved with reports; the PDF section explains the same.
