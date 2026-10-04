@@ -9,6 +9,7 @@ import { buildCaseStudy, oneIn, type CaseStudy } from '../../shared/caseStudy';
 import { CROP_OPTIONS } from '../../shared/crops';
 import { REGION_PRESETS } from '../../shared/regions';
 import { fetchClimate, fetchLatestWinter } from '../lib/api';
+import { BlossomTree } from './BlossomTree';
 import { fmtValue } from '../lib/seasonSeries';
 
 /*
@@ -162,33 +163,8 @@ export function StoryPage({ onStart }: { onStart: () => void }) {
   const lowestPast = cs ? Math.min(...cs.winters.filter((w) => w.year !== cs.latest.year).map((w) => w.portions)) : 0;
 
   return (
-    <article className="space-y-20 pb-8 pt-10 sm:space-y-24">
-      {/* Hero */}
-      <header className="relative overflow-hidden rounded-[2rem] bg-bark px-6 py-12 text-paper sm:px-12 sm:py-16">
-        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-96 rounded-full bg-frost/30 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-32 -left-16 size-80 rounded-full bg-ember/30 blur-3xl" />
-        <div className="relative max-w-[44rem] space-y-6">
-          <Eyebrow tone="text-sun">Build for 2035 · COP31 priority: Awareness Across All Areas</Eyebrow>
-          <h1 className="text-4xl font-extrabold leading-[1.05] sm:text-6xl">
-            A tree planted this winter is still cropping in 2045.
-          </h1>
-          <p className="text-xl text-paper/80 sm:text-2xl">
-            Its grower has to choose it now, using the winters they remember. Paddock shows them the winters it will actually grow through.
-          </p>
-          {cs && (
-            <p className="inline-flex flex-wrap items-baseline gap-x-3 rounded-2xl bg-paper/10 px-5 py-4 text-lg">
-              <span className="font-display text-4xl font-extrabold text-[#f0a597] tabular">{cs.latest.year}</span>
-              <span>gave {CASE.name} its least winter chill in <strong>{cs.winters.length} years</strong> of records.</span>
-            </p>
-          )}
-          <div>
-            <button type="button" onClick={onStart}
-              className="inline-flex items-center gap-2 rounded-xl bg-paper px-6 py-3 text-lg font-bold text-bark hover:bg-white">
-              Check your block <ArrowRight size={20} aria-hidden />
-            </button>
-          </div>
-        </div>
-      </header>
+    <article className="space-y-20 pb-8 pt-2 sm:space-y-24">
+      <BlossomTree cs={cs} place={CASE.name} onStart={onStart} skipTo="story-case" />
 
       {/* The problem, now */}
       <Section id="story-now" eyebrow="The problem is already here" title="This season, a warm winter is costing growers.">
