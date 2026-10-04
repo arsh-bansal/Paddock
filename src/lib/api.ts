@@ -83,3 +83,8 @@ export async function prepareImage(
     preview: dataUrl,
   };
 }
+
+export function fetchLatestWinter(lat: number, lon: number) {
+  const q = new URLSearchParams({ lat: String(lat), lon: String(lon) });
+  return request<import("../../shared/caseStudy").LatestWinter>(`/api/latest-winter?${q}`);
+}

@@ -11,7 +11,7 @@ import { z } from "zod";
 import { AU_BOUNDS } from "../shared/regions";
 import type { ClimateAnalysis } from "../shared/types";
 import { RateLimitedError } from "./openMeteo";
-import { analyseLocation, DataUnavailableError } from "./analysis";
+import { analyseLocation, DataUnavailableError, latestWinter } from "./analysis";
 import { AiUnavailableError, diagnosePhoto, explainResult } from "./gemini";
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -103,6 +103,18 @@ type GeocodeHit = {
 };
 
 /** Address search via Open-Meteo Geocoding (Australia only; optional state filter). */
+app.get("/api/latest-winter", climateLimiter, async (req, res) => {
+  const q = coordsSchema.safeParse(req.query);
+  if (!q.success) {
+    res.status(400).json({ error: "Pick a location inside Australia." });
+    return;
+  }
+  const lat = Math.round(q.data.lat * 100) / 100;
+  const lon = Math.round(q.data.lon * 100) / 100;
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.json(await latestWinter(lat, lon));
+});
+
 app.get("/api/geocode", climateLimiter, async (req, res) => {
   const q = geocodeSchema.safeParse(req.query);
   if (!q.success) {

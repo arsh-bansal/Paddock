@@ -139,6 +139,28 @@ export async function getObserved(lat: number, lon: number) {
   return cached(cacheKey('observed', lat, lon), `${ARCHIVE_URL}?${params}`);
 }
 
+/**
+ * The most recent winter (1 April to 30 September) that the reanalysis archive covers. ERA5 lags
+ * real time by a few days, so a winter counts once early October has passed.
+ */
+export function latestWinterYear(today = new Date()): number {
+  const y = today.getUTCFullYear();
+  const covered = today.getTime() >= Date.UTC(y, 9, 3); // 3 October
+  return covered ? y : y - 1;
+}
+
+export async function getWinter(lat: number, lon: number, year: number) {
+  const params = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lon),
+    start_date: `${year}-04-01`,
+    end_date: `${year}-09-30`,
+    daily: DAILY_VARS,
+    timezone: 'auto',
+  });
+  return cached(`v1_winter${year}_${lat.toFixed(2)}_${lon.toFixed(2)}`, `${ARCHIVE_URL}?${params}`);
+}
+
 export async function getModels(lat: number, lon: number) {
   const params = new URLSearchParams({
     latitude: String(lat),
