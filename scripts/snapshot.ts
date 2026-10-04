@@ -24,5 +24,6 @@ for (const r of REGION_PRESETS) {
   } catch (err) {
     console.error(`✗ ${label}: ${(err as Error).message}`);
   }
-  await new Promise((r) => setTimeout(r, 1500)); // be polite to the free API
+  // Be polite to the free API. Open-Meteo also has per-minute and hourly limits: set SNAPSHOT_DELAY_MS=65000 if you hit them.
+  await new Promise((r) => setTimeout(r, Number(process.env.SNAPSHOT_DELAY_MS ?? 1500)));
 }

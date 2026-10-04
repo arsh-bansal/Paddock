@@ -2,6 +2,7 @@ import { useId, useRef, useState } from 'react';
 import {
   Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
+import { historyFor } from '../../shared/history';
 import type { CropEvaluation } from '../../shared/seasons';
 import type { ClimateAnalysis } from '../../shared/types';
 import { fmtInt } from '../lib/format';
@@ -41,6 +42,10 @@ export function SeasonCharts({ analysis, crops, placeName }: Props) {
     : [];
 
   const firstYear = s.observed[0]?.[0] ?? s.baselinePeriod[0];
+  const history = historyFor(analysis.observed);
+  const periodLines = history
+    ? [history.early, history.recent].map((p) => ({ period: p.period, value: p.summary[metric.summaryKey].median }))
+    : [];
   const obs = new Map(s.observed);
   const rows: Row[] = [];
   for (let y = firstYear; y <= f1; y++) {
@@ -52,8 +57,8 @@ export function SeasonCharts({ analysis, crops, placeName }: Props) {
     }
     rows.push(row);
   }
-  const axis = axisFor([...obs.values(), s.future.p10, s.future.p90, ...lines.map((l) => l.value)]);
-  const decadeTicks = [1995, 2005, 2015, 2025, 2035, 2045].filter((t) => t >= firstYear && t <= f1);
+  const axis = axisFor([...obs.values(), s.future.p10, s.future.p90, ...lines.map((l) => l.value), ...periodLines.map((p) => p.value)]);
+  const decadeTicks = [1985, 1995, 2005, 2015, 2025, 2035, 2045].filter((t) => t >= firstYear && t <= f1);
 
   const onKey = (e: React.KeyboardEvent, i: number) => {
     const n = SEASON_METRICS.length;
@@ -94,6 +99,10 @@ export function SeasonCharts({ analysis, crops, placeName }: Props) {
               {axis.min < 0 && <ReferenceLine y={0} stroke="#b9bcb2" />}
               <ReferenceArea x1={f0} x2={f1} fill="#dfeaf1" fillOpacity={0.35}
                 label={{ value: 'Projected', position: 'insideTopLeft', fill: '#3c6f8f', fontSize: 13 }} />
+              {periodLines.map((p) => (
+                <ReferenceLine key={p.period[0]} stroke="#5b5e55" strokeWidth={2.5}
+                  segment={[{ x: p.period[0], y: p.value }, { x: p.period[1], y: p.value }]} />
+              ))}
               <Area dataKey="band" stroke="none" fill={metric.colour} fillOpacity={0.22} isAnimationActive={false} name="Likely range (10th–90th percentile)" />
               <Line dataKey="median" stroke={metric.colour} strokeWidth={2} strokeDasharray="6 4" dot={false} isAnimationActive={false} name="Typical year" />
               <Line dataKey="observed" stroke={metric.colour} strokeWidth={1.5} dot={{ r: 3, fill: metric.colour }} connectNulls={false}
@@ -125,6 +134,7 @@ export function SeasonCharts({ analysis, crops, placeName }: Props) {
         )}
         <p className="mt-3 text-sm text-muted">
           {`Dots are real years (reanalysis). The shaded band is the spread of years expected in ${f0}–${f1} across ${s.modelCount} climate models, not a year-by-year forecast.`}
+          {periodLines.length > 0 && ` Solid grey lines are the typical year in ${periodLines.map((p) => `${p.period[0]}–${p.period[1]}`).join(' and ')}.`}
           {metric.cropLines && ' Dotted lines are each crop’s chill need, coloured by how it fares in winter.'}
           {metric.note && ` ${metric.note}`}
         </p>

@@ -3,7 +3,10 @@ import type { CropEvaluation, SeasonSummary, YearStat } from './seasons';
 
 export const BASELINE_PERIOD = [1995, 2014] as const;
 export const FUTURE_PERIOD = [2026, 2045] as const;
-export const OBSERVED_PERIOD = [1995, 2025] as const;
+export const OBSERVED_PERIOD = [1985, 2025] as const;
+/** Two real 20-year periods: the climate growers remember, and the recent one. */
+export const EARLY_PERIOD = [1985, 2004] as const;
+export const RECENT_PERIOD = [2005, 2024] as const;
 
 export type Verdict = 'viable' | 'at-risk' | 'not-viable';
 

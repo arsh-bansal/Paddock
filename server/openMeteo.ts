@@ -48,10 +48,12 @@ export interface RawDaily {
 
 /** Bump when the requested variables change so old cache files aren't reused. */
 const CACHE_VERSION = 'v2';
+/** Observed data has its own version: v3 starts in 1985 instead of 1995. */
+const OBSERVED_CACHE_VERSION = 'v3';
 const DAILY_VARS = 'temperature_2m_max,temperature_2m_min,precipitation_sum';
 
 export function cacheKey(kind: 'observed' | 'models', lat: number, lon: number): string {
-  return `${CACHE_VERSION}_${kind}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
+  return `${kind === 'observed' ? OBSERVED_CACHE_VERSION : CACHE_VERSION}_${kind}_${lat.toFixed(2)}_${lon.toFixed(2)}`;
 }
 
 async function readCache(key: string): Promise<RawDaily | null> {
@@ -82,15 +84,34 @@ async function writeCache(key: string, value: RawDaily): Promise<void> {
   }
 }
 
+/** Open-Meteo's free tier has per-minute, hourly and daily request limits. */
+export class RateLimitedError extends Error {
+  constructor(readonly window: 'minute' | 'hour' | 'day') {
+    super(`Open-Meteo ${window} request limit exceeded`);
+  }
+}
+
+export function rateLimitWindow(status: number, reason: string | undefined): RateLimitedError['window'] | null {
+  const r = (reason ?? '').toLowerCase();
+  if (r.includes('hourly')) return 'hour';
+  if (r.includes('daily')) return 'day';
+  if (status === 429 || r.includes('limit exceeded')) return 'minute';
+  return null;
+}
+
 async function fetchJson(url: string, attempts = 2): Promise<RawDaily> {
   let lastErr: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
       const body = (await res.json()) as RawDaily & { error?: boolean; reason?: string };
+      const limited = rateLimitWindow(res.status, body.reason);
+      if (limited) throw new RateLimitedError(limited);
       if (!res.ok || body.error) throw new Error(body.reason ?? `Open-Meteo responded ${res.status}`);
       return body;
     } catch (err) {
+      // Retrying straight away only burns more of the quota.
+      if (err instanceof RateLimitedError) throw err;
       lastErr = err;
       if (i < attempts - 1) await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
     }
