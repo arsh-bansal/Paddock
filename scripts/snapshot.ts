@@ -5,7 +5,7 @@
  *   npm run snapshot
  */
 import { REGION_PRESETS } from '../shared/regions';
-import { analyseLocation } from '../server/analysis';
+import { analyseLocation, latestWinter } from '../server/analysis';
 import { writeToSnapshot } from '../server/openMeteo';
 
 writeToSnapshot();
@@ -21,6 +21,8 @@ for (const r of REGION_PRESETS) {
         `hot days ${a.baseline.summary.hotDays.mean.toFixed(1)} → ${a.future.summary.hotDays.mean.toFixed(1)}, ` +
         `rain ${Math.round(a.baseline.summary.annualRainMm.mean)} mm, models ${a.future.models.length}`,
     );
+    const w = await latestWinter(r.lat, r.lon);
+    console.log(`  winter ${w.year}: ${Math.round(w.chillPortions)} portions (${w.chillHours} h)`);
   } catch (err) {
     console.error(`✗ ${label}: ${(err as Error).message}`);
   }

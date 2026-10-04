@@ -1,7 +1,7 @@
 import { annualPrecipChangePct, applyMonthlyDelta, meanDelta, monthlyMeans, summarise } from '../shared/chill';
 import { summariseYears, yearlyStats } from '../shared/seasons';
 import { BASELINE_PERIOD, FUTURE_PERIOD, type ClimateAnalysis, type ModelResult, type YearStat } from '../shared/types';
-import { CLIMATE_MODELS, getModels, getObserved, toDailyWeather } from './openMeteo';
+import { CLIMATE_MODELS, getModels, getObserved, getWinter, latestWinterYear, toDailyWeather } from './openMeteo';
 
 export class DataUnavailableError extends Error {}
 
@@ -62,4 +62,14 @@ export async function analyseLocation(lat: number, lon: number, label: string): 
     generatedAt: new Date().toISOString(),
     servedFrom: obs.fromCache && mod.fromCache ? 'cache' : 'live',
   };
+}
+
+/** Chill in the most recent complete winter, which the main record (to 2025) doesn't include yet. */
+export async function latestWinter(lat: number, lon: number): Promise<{ year: number; chillHours: number; chillPortions: number }> {
+  const year = latestWinterYear();
+  const { data } = await getWinter(lat, lon, year);
+  const days = toDailyWeather(data);
+  const winter = days && yearlyStats(days, lat).find((y) => y.year === year)?.winter;
+  if (!winter) throw new DataUnavailableError(`The ${year} winter isn't complete in the weather record yet.`);
+  return { year, ...winter };
 }
