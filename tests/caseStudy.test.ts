@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCaseStudy, oneIn } from '../shared/caseStudy';
+import { buildCaseStudy, illustrativeSequence, oneIn } from '../shared/caseStudy';
 import type { YearStat } from '../shared/seasons';
 import type { ClimateAnalysis } from '../shared/types';
 import { summariseYears } from '../shared/seasons';
@@ -60,5 +60,16 @@ describe('oneIn', () => {
     expect(oneIn(20)).toBe('1 in 5');
     expect(oneIn(33.3)).toBe('1 in 3');
     expect(oneIn(0)).toBeNull();
+  });
+});
+
+describe('illustrativeSequence', () => {
+  it('keeps the projected share of low winters and is the same every time', () => {
+    const values = Array.from({ length: 60 }, (_, i) => 80 + (i % 20)); // 80..99, 25% <= 84
+    const seq = illustrativeSequence(values, 20);
+    expect(seq).toHaveLength(20);
+    expect(seq.filter((v) => v <= 84).length).toBe(5);
+    expect(illustrativeSequence(values, 20)).toEqual(seq);
+    expect([...seq].sort((a, b) => a - b)).not.toEqual(seq); // shuffled, not sorted
   });
 });
